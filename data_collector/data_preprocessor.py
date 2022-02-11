@@ -1,6 +1,7 @@
 import FinanceDataReader as fdr
 from datetime import datetime
 import pandas as pd
+from pymysql import NULL
 
 class DataPreprocessor:
 	
@@ -28,16 +29,20 @@ class DataPreprocessor:
 		string = string.replace("%", ".pct")
 		return (string)
 
+	def str_nan_out(self, string):
+		if string != "nan":
+			return string
+		elif string == "nan":
+			return NULL
+
 
 	def to_date(self, param):
 		return (str(param)[:10])
 
-	def util_zfill(self, code):
-		return (str(code).zfill(6))
 
-	def util_symbol(self, code):
-		market = fdr.StockListing('KRX')
-		return (market[market["Symbol"] == code]["Market"].values[0])
+	def util_symbol(self, code, market):
+		market_np = market.to_numpy()
+		return (market_np[market_np[:, 0] == code][0][1])
 
 
 	def util_to_date(self, param):
@@ -45,9 +50,25 @@ class DataPreprocessor:
 
 
 	def get_cur_code(self):
-		query = f"SELECT Symbol FROM cur_comp_info"
+		query = f"SELECT ID,Symbol FROM company"
 		df = pd.read_sql(query, con = self.engine)
-		return (df["Symbol"].unique())
+		return (df)
+
+
+	def get_additional_data(self, data, code, date):
+		"""
+		list(date, code, amount(pvol), marcap, stocks, ranks)
+		"""
+		selected = data[(data[:,1] == code) & (data[:,0] == date)]
+		return (selected)
+
+
+
+	def bring_additional_data(self):
+		query = f"SELECT Date,Code,Amount,Marcap,Stocks,Ranks FROM raw_price_info"
+		raw_df = pd.read_sql(query, con = self.engine)
+		raw_np = raw_df.to_numpy()
+		return (raw_np)
 
 
 	def get_unique_code(self):
@@ -73,5 +94,4 @@ class DataPreprocessor:
 			df = fdr.DataReader(f'{code}', f'{year}')
 			if int(year) == df.index.values[0].astype('datetime64[Y]').astype(int) + 1970:
 				break
-		print(year, code)
 		return (df)

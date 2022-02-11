@@ -1,9 +1,7 @@
 import FinanceDataReader as fdr
-import pandas_datareader as pdr
 from marcap import marcap_data
 from query_manager import QueryManager
 import pandas as pd
-from datetime import datetime
 
 class DataCollector(QueryManager):
 
@@ -21,13 +19,14 @@ class DataCollector(QueryManager):
 			at+=1
 
 
-	def get_cur_comp_info(self):
-		self.create_cur_comp_info_table()
+	def get_company_table(self):
+		self.create_company_table()
 		df_krx = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download', header=0)[0]
+		market = fdr.StockListing('KRX')
 		total = len(df_krx)
 		at = 0
 		for r in df_krx.itertuples():
-			self.replace_cur_comp_info_table(r, at, total)
+			self.replace_company_table(r, at, total, market)
 			at+=1
 
 
@@ -41,24 +40,27 @@ class DataCollector(QueryManager):
 			at+=1
 
 
-	def get_price_info(self):
-		self.create_price_info_table()
+	def get_price_table(self):
+		self.create_price_table()
 		self.codes = self.get_cur_code()
+		data = self.bring_additional_data()
 		total = len(self.codes)
 		at = 0
-		for code in self.codes:
-			df_adjclose = self.get_adjclose(code)
+		for code in self.codes.itertuples():
+			print(code)
+			df_adjclose = self.get_adjclose(code.Symbol)
 			total_code = len(df_adjclose)
 			at_code = 0
 			for r in df_adjclose.itertuples():
-				self.replace_price_info_table(code, r, at, total, at_code, total_code)
+				self.replace_price_table(code, r, at, total, at_code, total_code, data)
 				at_code+=1
 			at+=1
 
 
+	def get_finance_table(self):
+		pass
+
 if __name__ == "__main__":
 	dc = DataCollector()
-	# dc.get_raw_price_info() # 45min
-	# dc.get_cur_comp_info()
-	# dc.get_market_open_info()
-	dc.get_price_info()
+	# dc.get_company_table()
+	dc.get_price_table()

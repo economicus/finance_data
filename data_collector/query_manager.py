@@ -52,34 +52,36 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		return (df)
 
 
-	def create_cur_comp_info_table(self):
+	def create_company_table(self):
 		query = """
-			CREATE TABLE IF NOT EXISTS cur_comp_info ( 
+			CREATE TABLE IF NOT EXISTS company ( 
+				ID	INT,
 				Symbol VARCHAR(20),
 				Market VARCHAR(20),
 				Name VARCHAR(200),
+				MainSector VARCHAR(200),
 				Sector VARCHAR(200),
 				Industry VARCHAR(200),
-				ListingDate VARCHAR(20),
+				ListingDate DATE,
 				HomePage VARCHAR(200),
-				PRIMARY KEY (Symbol, Market))
+				PRIMARY KEY (ID, Symbol))
 			"""
 		result_proxy = self.connection.execute(query)
 		result_proxy.close()
-		self.print_create_status('cur_comp_info')
+		self.print_create_status('company')
 
 
 
-	def replace_cur_comp_info_table(self, r, at, total):
-		code = self.util_zfill(r.종목코드)
-		market_id = self.util_symbol(code)
+	def replace_company_table(self, r, at, total, market):
+		code = str(r.종목코드).zfill(6)
+		market_id = self.util_symbol(code, market)
 		industry = self.str_exception_out(str(r.주요제품))
-		query = f"REPLACE INTO cur_comp_info VALUES('{code}', '{market_id}', \
-					'{r.회사명}', '{r.업종}', '{industry}', '{r.상장일}', \
+		query = f"REPLACE INTO company VALUES({at}, '{code}', '{market_id}', \
+					'{r.회사명}', 'NULL', '{r.업종}', '{industry}', '{r.상장일}', \
 					'{r.홈페이지}')"
 		result_proxy = self.connection.execute(query)
 		result_proxy.close()
-		self.print_replace_status('cur_comp_info', at, total, code)
+		self.print_replace_status('company', at, total, code)
 
 
 	def create_market_open_info_table(self):
@@ -102,25 +104,37 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 
 
 
-	def create_price_info_table(self):
+	def create_price_table(self):
 		query_1 = """
-			CREATE TABLE IF NOT EXISTS price_info ( 
+			CREATE TABLE IF NOT EXISTS price (
+				ID INT,
 				Code VARCHAR(20),
 				Date DATE,
-				Open VARCHAR(20),
-				High VARCHAR(20),
-				Low VARCHAR(20),
-				AdjClose VARCHAR(20),
-				Volume VARCHAR(20),
-				Changes VARCHAR(200),
-				PRIMARY KEY (Code, Date))
+				Open BIGINT(20),
+				High BIGINT(20),
+				Low BIGINT(20),
+				AdjClose BIGINT(20),
+				Volume BIGINT(20),
+				PVolume BIGINT(20),
+				Changes FLOAT(20),
+				Marcap BIGINT(20),
+				Stocks BIGINT(20),
+				Ranks INT,
+				PRIMARY KEY (ID, Code),
+				FOREIGN KEY (ID) REFERENCES company (ID))
 			"""
 		result_proxy = self.connection.execute(query_1)
 		result_proxy.close()
+		self.print_create_status('price')
 
-	def replace_price_info_table(self, code, r, at, total, at_code, total_code):
-		query = f"REPLACE INTO price_info VALUES ('{code}', '{self.to_date(r.Index)}', \
-				'{r.Open}', '{r.High}', '{r.Low}', '{r.Close}', '{r.Volume}', '{r.Change}')"
+
+	def replace_price_table(self, code, r, at, total, at_code, total_code, data):
+		addtional_data = self.get_additional_data(data, code, r.Index)
+		query = f"REPLACE INTO price VALUES ({int(code.ID)}, '{code.Symbol}', '{self.to_date(r.Index)}', \
+				{int(r.Open)}, {int(r.High)}, {int(r.Low)}, {int(r.Close)}, {int(r.Volume)}, \
+				{int(addtional_data[2])}, {float(self.str_nan_out(r.Change))}, {int(addtional_data[3])}, \
+				{int(addtional_data[4])}, {int(addtional_data[5])})"
 		result_proxy = self.connection.execute(query)
 		result_proxy.close()
-		self.print_replace_status('price_info', at, total, at_code, total_code)
+		self.print_replace_status('price', at, total, at_code, total_code)
+
