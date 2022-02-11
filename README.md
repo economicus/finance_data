@@ -2,6 +2,14 @@
 
 ## data_collector
 
+### 필요 데이터 -> db 저장
+
+### db 설정 및 실행방법
+
+- connect.py애서 db.create_engine('mysql+pymysql://{db 정보 입력}')
+
+- data_collector.py에서 함수 차례로 실행
+
 ### 함수설명
 
 - get_raw_price_info()
