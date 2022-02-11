@@ -120,7 +120,6 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 				Marcap BIGINT(20),
 				Stocks BIGINT(20),
 				Ranks INT,
-				PRIMARY KEY (ID, Code),
 				FOREIGN KEY (ID) REFERENCES company (ID))
 			"""
 		result_proxy = self.connection.execute(query_1)
@@ -128,13 +127,47 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		self.print_create_status('price')
 
 
-	def replace_price_table(self, code, r, at, total, at_code, total_code, data):
-		addtional_data = self.get_additional_data(data, code, r.Index)
-		query = f"REPLACE INTO price VALUES ({int(code.ID)}, '{code.Symbol}', '{self.to_date(r.Index)}', \
-				{int(r.Open)}, {int(r.High)}, {int(r.Low)}, {int(r.Close)}, {int(r.Volume)}, \
-				{int(addtional_data[2])}, {float(self.str_nan_out(r.Change))}, {int(addtional_data[3])}, \
-				{int(addtional_data[4])}, {int(addtional_data[5])})"
+	def replace_price_table(self, code, x, y, at, total, at_code, total_code):
+		query = f"INSERT INTO price VALUES ({int(code.ID)}, '{code.Symbol}', '{self.to_date(y[0])}', \
+				{int(x[1])}, {int(x[2])}, {int(x[3])}, {int(x[4])}, {int(x[5])}, \
+				{int(y[2])}, {float(self.str_nan_out(x[6]))}, {int(y[3])}, \
+				{int(y[4])}, {int(y[5])})"
 		result_proxy = self.connection.execute(query)
 		result_proxy.close()
 		self.print_replace_status('price', at, total, at_code, total_code)
 
+
+	def create_finance_table(self):
+		query_1 = """
+			CREATE TABLE IF NOT EXISTS price (
+				ID INT,
+				Code VARCHAR(20),
+				Quarter DATE,
+				NetRevenue BIGINT(20),
+				NetProfitMargin FLOAT(20),
+				D/E Ratio FLOAT(20),
+				PER FLOAT(20),
+				PSR FLOAT(20),
+				PBR FLOAT(20),
+				OperationActivities BIGINT(20),
+				InvestingActivities BIGINT(20),
+				FinancingActivities BIGINT(20),
+				DividendYield FLOAT(20),
+				DividendPayoutRatio FLOAT(20),
+				ROA FLOAT(20),
+				REO FLOAT(20),
+				FOREIGN KEY (ID) REFERENCES company (ID))
+			"""
+		result_proxy = self.connection.execute(query_1)
+		result_proxy.close()
+		self.print_create_status('finance')
+
+
+	def replace_finance_table(self, code):
+		f_list = self.bring_finance_data(code.Symbol)
+		# for i in range(len(f_list)):
+		# 	query = f"INSERT INTO price VALUES ({int(code.ID)}, '{code.Symbol}', \
+		# 			)"
+		# 	result_proxy = self.connection.execute(query)
+		# 	result_proxy.close()
+		# self.print_replace_status('price', at, total, at_code, total_code)

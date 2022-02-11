@@ -1,12 +1,15 @@
 import FinanceDataReader as fdr
+import pandas_datareader as pdr
 from marcap import marcap_data
 from query_manager import QueryManager
 import pandas as pd
+from datetime import datetime
 
 class DataCollector(QueryManager):
 
 	def __init__(self):
 		super().__init__()
+		self.codes = self.get_cur_code()
 
 
 	def get_raw_price_info(self):
@@ -42,23 +45,29 @@ class DataCollector(QueryManager):
 
 	def get_price_table(self):
 		self.create_price_table()
-		self.codes = self.get_cur_code()
 		data = self.bring_additional_data()
 		total = len(self.codes)
 		at = 0
 		for code in self.codes.itertuples():
-			print(code)
 			df_adjclose = self.get_adjclose(code.Symbol)
+			df_adddata = self.get_additional_data(data, code.Symbol)
+			df_adjclose, df_adddata = self.compare_date(df_adjclose, df_adddata)
 			total_code = len(df_adjclose)
 			at_code = 0
-			for r in df_adjclose.itertuples():
-				self.replace_price_table(code, r, at, total, at_code, total_code, data)
+			for i, (x, y) in enumerate(zip(df_adjclose.values, df_adddata.values)):
+				self.replace_price_table(code, x, y, at, total, at_code, total_code)
 				at_code+=1
 			at+=1
 
 
 	def get_finance_table(self):
-		pass
+		self.create_finance_table()
+		total = len(self.codes)
+		at = 0
+		for code in self.codes.itertuples():
+			self.replace_finance_table(code, at, total)
+			at+=1
+
 
 if __name__ == "__main__":
 	dc = DataCollector()
