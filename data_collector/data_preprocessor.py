@@ -4,6 +4,7 @@ import pandas as pd
 from pymysql import NULL
 import numpy as np
 from soupsieve import select
+import math
 
 class DataPreprocessor:
 	
@@ -39,9 +40,20 @@ class DataPreprocessor:
 
 
 	def to_date(self, param):
-		year = param
 		return (str(param)[:10])
 
+
+	def to_num(self, num):
+		if isinstance(num, float):
+			if math.isnan(num):
+				return NULL
+		if isinstance(num, np.float64):
+			return NULL
+		num = num.replace(",", "")
+		if "." in num:
+			return(float(num))
+		else:
+			return (int(num))
 
 	def util_symbol(self, code, market):
 		market_np = market.to_numpy()
@@ -62,33 +74,41 @@ class DataPreprocessor:
 		"""
 		Date,Code,Amount,Marcap,Stocks,Ranks
 		"""
-		end = datetime(2021, 12, 30)
-		selected = data[(data["Code"] == code) & (data["Date"] <= end.date())]
+		selected = data[(data[:,1] == code) & (data[:,0] <= date(2021, 12, 30))]
 		return (selected)
 
 
+	def get_date(self, string):
+		if isinstance(string, np.float64):
+			return date(1900, 1, 1)
+		string = string.replace("\n\t\t\t\t\t\t\t\t\t\n", "")
+		year = int(string[0:4])
+		month = int(string[5:7])
+		return (date(year, month, 1))
 
 	def bring_additional_data(self):
 		query = f"SELECT Date,Code,Amount,Marcap,Stocks,Ranks FROM raw_price_info"
 		raw_df = pd.read_sql(query, con = self.engine)
-		return (raw_df)
+		raw_np = raw_df.to_numpy()
+		return (raw_np)
 
 
-	def bring_finance_data(self, code):
+	def bring_finance_data(self, code, path):
 		try:
 			col = [1, 6, 24, 27, 29, 14, 15, 16, 31, 32, 22, 23]
 			datas = []
 
-			df = pd.read_csv(f"data/financial_whole/{code.Symbol}.csv")
+			df = pd.read_csv(f"{path}/{code}.csv")
 			for i in range(1, 9):
 				tmp = df[f"{i}"]
-				data = [tmp[j] for j in col]
-				datas.append([tmp[0].replace("\n\t\t\t\t\t\t\t\t\t\n", ""), data])
+				data = [self.to_num(tmp[j]) for j in col]
+				data.append(self.get_date(tmp[0]))
+				datas.append(data)
 			return (datas)
 				
 		except Exception as e:
 			print(f"{e} : {code}")
-
+			print(df[f"{i}"])
 
 	def get_unique_code(self):
 		unique_code_list = []
@@ -105,15 +125,15 @@ class DataPreprocessor:
 		return (unique_code_list)
 
 	
-	def compare_date(self, df_adj, df_add):
-		adj_start = df_adj["Date"][0].date()
-		add_start = df_add["Date"][0]
+	def compare_date(self, np_adj, np_add):
+		adj_start = np_adj[:,0][0].date()
+		add_start = np_add[:,0][0]
 		if (adj_start == add_start):
-			return df_adj, df_add
+			return np_adj, np_add
 		elif (adj_start > add_start):
-			return (df_adj, df_add[df_add["Date"] >= adj_start])
+			return (np_adj, np_add[np_add[:,0] >= adj_start])
 		elif (adj_start < add_start):
-			return (df_adj[df_adj["Date"] >= datetime(add_start.year, add_start.month, add_start.day)], df_add)
+			return (np_adj[np_adj[:,0] >= datetime(add_start.year, add_start.month, add_start.day)], np_add)
 		else:
 			print("invalid_type")
 
@@ -133,4 +153,5 @@ class DataPreprocessor:
 		# end = df.index[-1].to_pydatetime()
 		df = df.reset_index()
 		df = df[df["Date"] <= datetime(2021, 12, 30)]
-		return (df)
+		df_np = df.to_numpy()
+		return (df_np)

@@ -49,27 +49,30 @@ class DataCollector(QueryManager):
 		total = len(self.codes)
 		at = 0
 		for code in self.codes.itertuples():
-			df_adjclose = self.get_adjclose(code.Symbol)
-			df_adddata = self.get_additional_data(data, code.Symbol)
-			df_adjclose, df_adddata = self.compare_date(df_adjclose, df_adddata)
-			total_code = len(df_adjclose)
+			np_adjclose = self.get_adjclose(code.Symbol)
+			np_adddata = self.get_additional_data(data, code.Symbol)
+			np_adjclose, np_adddata = self.compare_date(np_adjclose, np_adddata)
+			total_code = len(np_adjclose)
 			at_code = 0
-			for i, (x, y) in enumerate(zip(df_adjclose.values, df_adddata.values)):
+			for i, (x, y) in enumerate(zip(np_adjclose, np_adddata)):
 				self.replace_price_table(code, x, y, at, total, at_code, total_code)
 				at_code+=1
 			at+=1
 
 
-	def get_finance_table(self):
+	def get_finance_table(self, path):
 		self.create_finance_table()
 		total = len(self.codes)
 		at = 0
 		for code in self.codes.itertuples():
-			self.replace_finance_table(code, at, total)
+			self.replace_finance_table(code, at, total, path)
 			at+=1
 
 
 if __name__ == "__main__":
+	# finance data path
+	path = "data/financial_whole" # financial_whole path
 	dc = DataCollector()
 	# dc.get_company_table()
-	dc.get_price_table()
+	# dc.get_price_table()
+	# dc.get_finance_table(path)
