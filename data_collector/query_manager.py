@@ -1,6 +1,7 @@
 from connect import SQLAlchemyConnector
 from data_preprocessor import DataPreprocessor
 import pandas as pd
+from pymysql import NULL
 
 class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 	def __init__(self):
@@ -139,13 +140,13 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 
 	def create_finance_table(self):
 		query_1 = """
-			CREATE TABLE IF NOT EXISTS price (
+			CREATE TABLE IF NOT EXISTS finance (
 				ID INT,
 				Code VARCHAR(20),
 				Quarter DATE,
 				NetRevenue BIGINT(20),
 				NetProfitMargin FLOAT(20),
-				D/E Ratio FLOAT(20),
+				DERatio FLOAT(20),
 				PER FLOAT(20),
 				PSR FLOAT(20),
 				PBR FLOAT(20),
@@ -163,11 +164,19 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		self.print_create_status('finance')
 
 
-	def replace_finance_table(self, code):
-		f_list = self.bring_finance_data(code.Symbol)
-		# for i in range(len(f_list)):
-		# 	query = f"INSERT INTO price VALUES ({int(code.ID)}, '{code.Symbol}', \
-		# 			)"
-		# 	result_proxy = self.connection.execute(query)
-		# 	result_proxy.close()
-		# self.print_replace_status('price', at, total, at_code, total_code)
+	def replace_finance_table(self, code, at, total, path):
+		try:
+			f_list = self.bring_finance_data(code.Symbol, path)
+			# [1, 6, 24, 27, 29, 14, 15, 16, 31, 32, 22, 23, 0]
+			for i in range(len(f_list)):
+				query = f"INSERT INTO finance VALUES ({int(code.ID)}, '{code.Symbol}', \
+						'{f_list[i][12]}', {f_list[i][0]}, {f_list[i][1]}, {f_list[i][2]}, \
+						{f_list[i][3]}, {NULL}, {f_list[i][4]}, {f_list[i][5]}, {f_list[i][6]}, \
+						{f_list[i][7]}, {f_list[i][8]}, {f_list[i][9]}, {f_list[i][10]}, \
+						{f_list[i][11]})"
+				result_proxy = self.connection.execute(query)
+				result_proxy.close()
+			self.print_replace_status('finance', at, total, code.Symbol)
+		except Exception as e:
+			print(e)
+			self.print_replace_status('finance', at, total, 'no_files')
