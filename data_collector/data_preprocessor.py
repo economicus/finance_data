@@ -5,6 +5,9 @@ from pymysql import NULL
 import numpy as np
 from soupsieve import select
 import math
+from operator import itemgetter
+from marcap import marcap_data
+
 
 class DataPreprocessor:
 	
@@ -74,7 +77,9 @@ class DataPreprocessor:
 		"""
 		Date,Code,Amount,Marcap,Stocks,Ranks
 		"""
-		selected = data[(data[:,1] == code) & (data[:,0] <= date(2021, 12, 30))]
+		selected = data[(data[:,1] == code)]
+		selected = selected[selected[:, 0].argsort()]
+		selected = selected[selected[:,0] <= datetime(2021, 12, 30)]
 		return (selected)
 
 
@@ -86,9 +91,11 @@ class DataPreprocessor:
 		month = int(string[5:7])
 		return (date(year, month, 1))
 
+
 	def bring_additional_data(self):
-		query = f"SELECT Date,Code,Amount,Marcap,Stocks,Ranks FROM raw_price_info"
-		raw_df = pd.read_sql(query, con = self.engine)
+		raw_df = marcap_data('1995-05-02', '2021-12-31')
+		raw_df = raw_df.reset_index()
+		raw_df = raw_df[["Date", "Code", "Amount", "Marcap", "Stocks", "Rank"]]
 		raw_np = raw_df.to_numpy()
 		return (raw_np)
 
@@ -126,16 +133,14 @@ class DataPreprocessor:
 
 	
 	def compare_date(self, np_adj, np_add):
-		adj_start = np_adj[:,0][0].date()
+		adj_start = np_adj[:,0][0]
 		add_start = np_add[:,0][0]
 		if (adj_start == add_start):
 			return np_adj, np_add
 		elif (adj_start > add_start):
-			return (np_adj, np_add[np_add[:,0] >= adj_start])
-		elif (adj_start < add_start):
-			return (np_adj[np_adj[:,0] >= datetime(add_start.year, add_start.month, add_start.day)], np_add)
-		else:
-			print("invalid_type")
+			np_add = np_add[np_add[:,0] >= adj_start]
+			np_add = np_add[np_add[:, 0].argsort()]
+			return (np_adj, np_add)
 
 
 	def year_gen(self):
@@ -155,3 +160,12 @@ class DataPreprocessor:
 		df = df[df["Date"] <= datetime(2021, 12, 30)]
 		df_np = df.to_numpy()
 		return (df_np)
+
+	def give_none(self, np_adj, np_add, code):
+		# "Date", "Code", "Amount", "Marcap", "Stocks", "Rank"
+		for i in range(len(np_adj)):
+			if np_adj[:,0][i] < np_add[:,0][i]:
+				np_add = np.insert(np_add, i, np.array((np_adj[:,0][i], code.Symbol, 0, np_add[:,3][i-1], \
+					np_add[:,4][i-1], 0)), 0)
+
+		return np_adj, np_add

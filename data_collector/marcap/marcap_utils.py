@@ -37,6 +37,6 @@ def marcap_data(start, end=None, code=None):
   if code:
     df_merged = df_merged[code == df_merged['Code']]  
   df_merged.set_index('Date', inplace=True)
-  return df_merged[df_merged['Volume'] > 0]
+  return df_merged
 
 
