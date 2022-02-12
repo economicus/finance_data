@@ -49,15 +49,20 @@ class DataCollector(QueryManager):
 		total = len(self.codes)
 		at = 0
 		for code in self.codes.itertuples():
-			np_adjclose = self.get_adjclose(code.Symbol)
-			np_adddata = self.get_additional_data(data, code.Symbol)
-			np_adjclose, np_adddata = self.compare_date(np_adjclose, np_adddata)
-			total_code = len(np_adjclose)
-			at_code = 0
-			for i, (x, y) in enumerate(zip(np_adjclose, np_adddata)):
-				self.replace_price_table(code, x, y, at, total, at_code, total_code)
-				at_code+=1
-			at+=1
+			try:
+				np_adjclose = self.get_adjclose(code.Symbol)
+				np_adddata = self.get_additional_data(data, code.Symbol)
+				np_adjclose, np_adddata = self.compare_date(np_adjclose, np_adddata)
+				np_adjclose, np_adddata = self.give_none(np_adjclose, np_adddata, code)
+				total_code = len(np_adjclose)
+				at_code = 0
+				for i, (x, y) in enumerate(zip(np_adjclose, np_adddata)):
+					self.replace_price_table(code, x, y, at, total, at_code, total_code)
+					at_code+=1
+				at+=1
+
+			except Exception as e:
+				print(f'{e} : {code}')
 
 
 	def get_finance_table(self, path):
@@ -71,7 +76,8 @@ class DataCollector(QueryManager):
 
 if __name__ == "__main__":
 	# finance data path
-	path = "data/financial_whole" # financial_whole path
+	path = "{your path}data/financial_whole"
+
 	dc = DataCollector()
 	# dc.get_company_table()
 	# dc.get_price_table()

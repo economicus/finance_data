@@ -109,7 +109,6 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		query_1 = """
 			CREATE TABLE IF NOT EXISTS price (
 				ID INT,
-				Code VARCHAR(20),
 				Date DATE,
 				Open BIGINT(20),
 				High BIGINT(20),
@@ -129,7 +128,7 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 
 
 	def replace_price_table(self, code, x, y, at, total, at_code, total_code):
-		query = f"INSERT INTO price VALUES ({int(code.ID)}, '{code.Symbol}', '{self.to_date(y[0])}', \
+		query = f"INSERT INTO price VALUES ({int(code.ID)}, '{self.to_date(y[0])}', \
 				{int(x[1])}, {int(x[2])}, {int(x[3])}, {int(x[4])}, {int(x[5])}, \
 				{int(y[2])}, {float(self.str_nan_out(x[6]))}, {int(y[3])}, \
 				{int(y[4])}, {int(y[5])})"
@@ -167,7 +166,6 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 	def replace_finance_table(self, code, at, total, path):
 		try:
 			f_list = self.bring_finance_data(code.Symbol, path)
-			# [1, 6, 24, 27, 29, 14, 15, 16, 31, 32, 22, 23, 0]
 			for i in range(len(f_list)):
 				query = f"INSERT INTO finance VALUES ({int(code.ID)}, '{code.Symbol}', \
 						'{f_list[i][12]}', {f_list[i][0]}, {f_list[i][1]}, {f_list[i][2]}, \
