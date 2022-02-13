@@ -163,9 +163,9 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		self.print_create_status('finance')
 
 
-	def replace_finance_table(self, code, at, total, path):
+	def replace_finance_table(self, code, at, total, path, path1):
 		try:
-			f_list = self.bring_finance_data(code.Symbol, path)
+			f_list = self.bring_finance_data(code.Symbol, path, path1)
 			for i in range(len(f_list)):
 				query = f"INSERT INTO finance VALUES ({int(code.ID)}, '{code.Symbol}', \
 						'{f_list[i][12]}', {f_list[i][0]}, {f_list[i][1]}, {f_list[i][2]}, \

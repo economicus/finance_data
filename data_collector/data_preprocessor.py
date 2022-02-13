@@ -35,6 +35,10 @@ class DataPreprocessor:
 				at+1, total, table, ((at+1) / total * 100)))
 
 
+
+	def year_gen(self):
+		return ([str(year) for year in range(1995, 2023)])
+
 	def str_exception_out(self, string):
 		string = str(string)
 		string = string.replace("'", " ")
@@ -48,10 +52,22 @@ class DataPreprocessor:
 		else:
 			return string
 
+	def compare_date(self, np_adj, np_add):
+		adj_start = np_adj[:,0][0]
+		add_start = np_add[:,0][0]
+		if (adj_start == add_start):
+			return np_adj, np_add
+		elif (adj_start > add_start):
+			np_add = np_add[np_add[:,0] >= adj_start]
+			np_add = np_add[np_add[:, 0].argsort()]
+			return (np_adj, np_add)
 
-	def to_date(self, param):
+	def util_symbol(self, code, market):
+		market_np = market.to_numpy()
+		return (market_np[market_np[:, 0] == code][0][1])
+
+	def util_to_strdate(self, param):
 		return (str(param)[:10])
-
 
 	def to_num(self, num):
 		if isinstance(num, float):
@@ -65,30 +81,8 @@ class DataPreprocessor:
 		else:
 			return (int(num))
 
-	def util_symbol(self, code, market):
-		market_np = market.to_numpy()
-		return (market_np[market_np[:, 0] == code][0][1])
-
-
-	def util_to_strdate(self, param):
+	def to_date(self, param):
 		return (str(param)[:10])
-
-
-	def get_cur_code(self):
-		query = f"SELECT ID,Symbol FROM company"
-		df = pd.read_sql(query, con = self.engine)
-		return (df)
-
-
-	def get_additional_data(self, data, code):
-		"""
-		Date,Code,Amount,Marcap,Stocks,Ranks
-		"""
-		selected = data[(data[:,1] == code)]
-		selected = selected[selected[:, 0].argsort()]
-		selected = selected[selected[:,0] <= datetime(2021, 12, 30)]
-		return (selected)
-
 
 	def get_date(self, string):
 		if isinstance(string, np.float64):
@@ -98,39 +92,28 @@ class DataPreprocessor:
 		month = int(string[5:7])
 		return (date(year, month, 1))
 
+	def give_none(self, np_adj, np_add, code):
+		# "Date", "Code", "Amount", "Marcap", "Stocks", "Rank"
+		for i in range(len(np_adj)):
+			if np_adj[:,0][i] < np_add[:,0][i]:
+				np_add = np.insert(np_add, i, np.array((np_adj[:,0][i], code.Symbol, 0, np_add[:,3][i-1], \
+					np_add[:,4][i-1], 0)), 0)
 
-	def bring_additional_data(self):
-		raw_df = marcap_data('1995-05-02', '2021-12-31')
-		raw_df = raw_df.reset_index()
-		raw_df = raw_df[["Date", "Code", "Amount", "Marcap", "Stocks", "Rank"]]
-		raw_np = raw_df.to_numpy()
-		return (raw_np)
+		return np_adj, np_add
 
+	def get_cur_code(self):
+		query = f"SELECT ID,Symbol FROM company"
+		df = pd.read_sql(query, con = self.engine)
+		return (df)
 
-	def bring_finance_data(self, code, path):
-		try:
-			col = [1, 6, 24, 27, 29, 14, 15, 16, 31, 32, 22, 23]
-			datas = []
-
-			df = pd.read_csv(f"{path}/{code}.csv")
-			for i in range(1, 9):
-				tmp = df[f"{i}"]
-				data = [self.to_num(tmp[j]) for j in col]
-				data.append(self.get_date(tmp[0]))
-				datas.append(data)
-			return (datas)
-				
-		except Exception as e:
-			print(f"{e} : {code}")
-			print(df[f"{i}"])
-
-	def bring_main_sector_data(self, code, path):
-		df = pd.read_csv(f"{path}/{code}.csv")
-		a = df["0"][0]
-		n = a.find("(")
-		m = a.find(")")
-		return a[n+1:m]
-
+	def get_additional_data(self, data, code):
+		"""
+		Date,Code,Amount,Marcap,Stocks,Ranks
+		"""
+		selected = data[(data[:,1] == code)]
+		selected = selected[selected[:, 0].argsort()]
+		selected = selected[selected[:,0] <= datetime(2021, 12, 30)]
+		return (selected)
 
 	def get_unique_code(self):
 		unique_code_list = []
@@ -146,20 +129,46 @@ class DataPreprocessor:
 		unique_code_list = list(unique_set)
 		return (unique_code_list)
 
-	
-	def compare_date(self, np_adj, np_add):
-		adj_start = np_adj[:,0][0]
-		add_start = np_add[:,0][0]
-		if (adj_start == add_start):
-			return np_adj, np_add
-		elif (adj_start > add_start):
-			np_add = np_add[np_add[:,0] >= adj_start]
-			np_add = np_add[np_add[:, 0].argsort()]
-			return (np_adj, np_add)
+	def bring_additional_data(self):
+		raw_df = marcap_data('1995-05-02', '2021-12-31')
+		raw_df = raw_df.reset_index()
+		raw_df = raw_df[["Date", "Code", "Amount", "Marcap", "Stocks", "Rank"]]
+		raw_np = raw_df.to_numpy()
+		return (raw_np)
 
+	def bring_finance_data(self, code, path, path1):
+		try:
+			col = [1, 6, 24, 27, 29, 14, 15, 16, 31, 32, 22, 23]
+			datas = []
 
-	def year_gen(self):
-		return ([str(year) for year in range(1995, 2023)])
+			# quarter
+			df = pd.read_csv(f"{path}/{code}.csv")
+			for i in range(1, 9): # 9
+				tmp = df[f"{i}"]
+				data = [self.to_num(tmp[j]) for j in col]
+				data.append(self.get_date(tmp[0]))
+				datas.append(data)
+			
+			# annual
+			df = pd.read_csv(f"{path1}/{code}.csv")
+			for i in range(1, 3): # 9
+				tmp = df[f"{i}"]
+				data = [self.to_num(tmp[j]) for j in col]
+				data.append(self.get_date(tmp[0]))
+				datas.append(data)
+			
+			return (datas)
+				
+		except Exception as e:
+			print(f"{e} : {code}")
+			print(df[f"{i}"])
+
+	def bring_main_sector_data(self, code, path):
+		df = pd.read_csv(f"{path}/{code}.csv")
+		a = df["0"][0]
+		n = a.find("(")
+		m = a.find(")")
+		return a[n+1:m]
 
 	def get_adjclose(self, code):
 		"""
@@ -176,11 +185,3 @@ class DataPreprocessor:
 		df_np = df.to_numpy()
 		return (df_np)
 
-	def give_none(self, np_adj, np_add, code):
-		# "Date", "Code", "Amount", "Marcap", "Stocks", "Rank"
-		for i in range(len(np_adj)):
-			if np_adj[:,0][i] < np_add[:,0][i]:
-				np_add = np.insert(np_add, i, np.array((np_adj[:,0][i], code.Symbol, 0, np_add[:,3][i-1], \
-					np_add[:,4][i-1], 0)), 0)
-
-		return np_adj, np_add
