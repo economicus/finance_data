@@ -28,6 +28,13 @@ class DataPreprocessor:
 				format(datetime.now().strftime('%Y-%m-%d %H:%M'), table))
 
 
+	def print_update_status(self, table, at, total, status):
+
+		print('[{}] : ({}) #{:04d} / {} rows > UPDATE {} ({} %)[OK]'.\
+				format(datetime.now().strftime('%Y-%m-%d %H:%M'), status, \
+				at+1, total, table, ((at+1) / total * 100)))
+
+
 	def str_exception_out(self, string):
 		string = str(string)
 		string = string.replace("'", " ")
@@ -116,6 +123,14 @@ class DataPreprocessor:
 		except Exception as e:
 			print(f"{e} : {code}")
 			print(df[f"{i}"])
+
+	def bring_main_sector_data(self, code, path):
+		df = pd.read_csv(f"{path}/{code}.csv")
+		a = df["0"][0]
+		n = a.find("(")
+		m = a.find(")")
+		return a[n+1:m]
+
 
 	def get_unique_code(self):
 		unique_code_list = []

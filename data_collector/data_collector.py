@@ -1,3 +1,4 @@
+from tkinter import E
 import FinanceDataReader as fdr
 import pandas_datareader as pdr
 from marcap import marcap_data
@@ -74,11 +75,24 @@ class DataCollector(QueryManager):
 			at+=1
 
 
+	def get_main_sector(self, path):
+		total = len(self.codes)
+		at = 0
+		for code in self.codes.itertuples():
+			try:
+				self.update_company_table(code, at, total, path)
+				at+=1
+			except Exception as e:
+				print(e, code)
+
+
+
 if __name__ == "__main__":
 	# finance data path
-	path = "{your path}data/financial_whole"
+	path = "/Users/alvinlee/Git_Folder/stock/data/data/financial_whole"
 
 	dc = DataCollector()
 	# dc.get_company_table()
 	# dc.get_price_table()
 	# dc.get_finance_table(path)
+	# dc.get_main_sector(path)
