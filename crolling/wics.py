@@ -19,9 +19,11 @@ def change_wics(wics):
 	elif (wics == "은행" or wics == '증권' or wics == '창업투자'or wics == '카드'or wics == '기타금융' or wics == '손해보험'or wics == '생명보험'or wics == '부동산'):
 		return "금융"
 	elif (wics == "IT서비스" or wics == '소프트웨어' or wics == '통신장비'or wics == '핸드셋'or wics == '컴퓨터와주변기기' or wics == '전자장비와기기'or 
-			wics == '사무용전자제품'or wics == '반도체와반도체장비'or wics == '전자제품'or wics == '전기제품'or wics == '디스플레이 패널'or wics == '디스플레이 장비 및 부품'):
+			wics == '사무용전자제품'or wics == '반도체와반도체장비'or wics == '전자제품'or wics == '전기제품'or wics == '디스플레이패널'or wics == '디스플레이장비및부품'):
 		return "IT"
 	elif (wics == "다각화된통신서비스" or wics == '무선통신서비스' or wics == '광고'or wics == '방송과엔터테인먼트'or wics == '출판' or wics == '게임엔터테인먼트'or wics == '양방향미디어와서비스'):
 		return "커뮤니케이션서비스"
 	elif (wics == "전기유틸리티" or wics == '가스유틸리티' or wics == '복합유틸리티'or wics == '수도유틸리티'or wics == '독립전력생산및에너지거래'):
 		return "유틸리티"
+	else:
+		return "미분류"
