@@ -178,3 +178,12 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		except Exception as e:
 			print(e)
 			self.print_replace_status('finance', at, total, 'no_files')
+
+
+	def update_company_table(self, code, at, total, path):
+		main_sector = self.bring_main_sector_data(code.Symbol, path)
+		query = f"UPDATE company SET MainSector = '{main_sector}' "\
+				f"WHERE Symbol = '{code.Symbol}'"
+		result_proxy = self.connection.execute(query)
+		result_proxy.close()
+		self.print_update_status('company', at, total, code.Symbol)
