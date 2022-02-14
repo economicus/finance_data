@@ -1,3 +1,4 @@
+from re import L
 from connect import SQLAlchemyConnector
 from datetime import datetime, timedelta
 import pandas as pd
@@ -8,22 +9,24 @@ class FindCode(SQLAlchemyConnector):
 	
 	def __init__(self):
 		super().__init__()
-		self.com_np, self.fin_np, self.pri_np = self.bring_table()
+		self.com_np, self.fin_np = self.bring_table()
 		self.ref_date = []
 
 
 	def bring_table(self):
+		print('getting datas...')
 		query1 = f"SELECT ID,Market,MainSector FROM company"
 		com_df = pd.read_sql(query1, con = self.engine)
 		query2 = f"SELECT * FROM finance"
 		fin_df = pd.read_sql(query2, con = self.engine)
-		query3 = f"SELECT * FROM price"
-		pri_df = pd.read_sql(query3, con = self.engine)
+		# query3 = f"SELECT * FROM price"
+		# pri_df = pd.read_sql(query3, con = self.engine)
 
 		com_np = com_df.to_numpy()
 		fin_np = fin_df.to_numpy()
-		pri_np = pri_df.to_numpy()
-		return (com_np, fin_np, pri_np)
+		# pri_np = pri_df.to_numpy()
+		print('complete!')
+		return (com_np, fin_np)
 
 
 	def rebalacing(self, start_date, end_date, rebalance):
@@ -78,44 +81,64 @@ class FindCode(SQLAlchemyConnector):
 		# filter set 
 		# 1. market(com), main_sector(com)
 		# 2. marcap(pri), 
-		searched = self.find_com_condition(cond['market'], cond['main_sector'])
-		self.find_fin_condition(searched, cond['net_rev'], cond['net_rev_r'], cond['net_prf'], \
-								cond['net_prf_r'], cond['de_r'], cond['per'], cond['psr'], \
-								cond['pbr'], cond['op_act'], cond['iv_act'], cond['fn_act'], \
-								cond['dv_yld'], cond['dv_pay_r'], cond['roa'], cond['roe'])
+		searched = self.find_com_condition(cond)
+		self.find_fin_condition(searched, cond)
 
 
-
-	def find_com_condition(self, market, main_sector):
+	def find_com_condition(self, cond):
 		searching = self.com_np
-		searching = searching[(searching[:,1] == market) & (searching[:,2] == main_sector)] # filtered (market, main_sector)
+		conditions = self.check_com_conditions(searching, cond)
+		searching = searching[conditions] # filtered (market, main_sector)
 		return (searching[:,0])
 
-	def find_fin_condition(self, searched, net_rev, net_rev_r, net_prf, net_prf_r, de_r, per, \
-							psr, pbr, op_act, iv_act, fn_act, dv_yld, dv_pay_r, roa, roe):
+	def find_fin_condition(self, searched, cond):
 		searching = self.fin_np
+		print(searched)
 		mask = np.in1d(searched, searching[:,0]) # code filtering from com_condition result
 		searching = searching[mask]
 
-		ref_date = self.ref_date()
+		
+		ref_date = self.ref_date
 		codes = []
 		for i in range(len(ref_date)):
+			print(searching)
 			searching = self.get_correct_date(searched, searching, i, ref_date)
-			searching = searching[(searching[:,3] >= net_rev[0]) & (searching[:,3] <= net_rev[1]) \
-								& (searching[:,4] >= net_prf[0]) & (searching[:,4] <= net_prf[1]) \
-								& (searching[:,5] >= de_r[0]) & (searching[:,5] <= de_r[1]) \
-								& (searching[:,6] >= per[0]) & (searching[:,6] <= per[1]) \
-								& (searching[:,8] >= pbr[0]) & (searching[:,8] <= pbr[1]) \
-								& (searching[:,9] >= op_act[0]) & (searching[:,9] <= op_act[1]) \
-								& (searching[:,10] >= iv_act[0]) & (searching[:,10] <= iv_act[1]) \
-								& (searching[:,11] >= fn_act[0]) & (searching[:,11] <= fn_act[1]) \
-								& (searching[:,12] >= dv_yld[0]) & (searching[:,12] <= dv_yld[1]) \
-								& (searching[:,13] >= dv_pay_r[0]) & (searching[:,13] <= dv_pay_r[1]) \
-								& (searching[:,14] >= roa[0]) & (searching[:,14] <= roa[1]) \
-								& (searching[:,15] >= roe[0]) & (searching[:,15] <= roe[1])]
+			conditions = self.check_fin_conditions(searching, cond)
+			searching = searching[conditions]
 			codes.append(searching[:,0], ref_date)
 
 		return (codes)
+
+
+	def check_com_conditions(self, searching, cond):
+		cond_idx = dict(market=1, main_sector=2)
+		con_list = []
+		for k, v in cond_idx.items():
+			if cond[str(k)] == None:
+				continue
+			else:
+				cond = (searching[:,v] >= cond[str(k)][0]) & (searching[:,v] <= cond[str(k)][1])
+				con_list.append(cond)
+
+		for i in range(len(con_list) - 1):
+			cond[i] = cond[i] & cond[i+1]
+		return (cond[len(con_list) - 2])
+		
+
+	# none check and combine all conditions
+	def check_fin_conditions(self, searching, cond):
+		cond_idx = dict(net_rev=3, net_prf=4, de_r=5, per=6, pbr=8, op_act=9, iv_act=10,
+						fn_act=11, dv_yld=12, dv_pay_r=13, roa=14, roe=15)
+		con_list = []
+		for k, v in cond_idx.items():
+			if cond[k] == None:
+				continue
+			else:
+				cond = (searching[:,v] >= cond[f'{k}'][0]) & (searching[:,v] <= cond[f'{k}'][1])
+				con_list.append(cond)
+		for i in range(len(con_list) - 1):
+			cond[i] = cond[i] & cond[i+1]
+		return (cond[len(con_list) - 2])
 
 
 	# 만약 리벨런싱기간이 6계월 이상이면 기준일로 부터 과거 가장 최근 재무재표를 참고함
@@ -124,10 +147,16 @@ class FindCode(SQLAlchemyConnector):
 			searching = searching[(searching[:,2] < ref_date[i][0])] # set_date
 		else:
 			searching = searching[(searching[:,2] < ref_date[i][0]) & (searching[:,2] >= ref_date[i+1][0])] # set_date
+		searching = searching[searching[:, 2].argsort()] # sort by date
+		searching = searching[searching[:, 0].argsort(kind='mergesort')] # sort by ID
+		np_list = []
 		for c in codes:
 			date = searching[searching[:,0] == c]
-			if (len(date) < 2):
+			if (len(date) == 0):
 				continue
+			elif (len(date) == 1):
+				np_list.append(date[0])
 			else:
-				recent = max(dt for dt in date[:,2] if dt < ref_date[i][0])
-				dates = date[np.invert(date[:,2] == recent)][:,2]
+				np_list.append(date[-1])
+		searched = np.array(np_list)
+		return (searched)
