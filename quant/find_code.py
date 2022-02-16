@@ -41,7 +41,7 @@ class FindCode(SQLAlchemyConnector):
 			self.ref_date.append([end_date, temp - timedelta(days = 1)])
 	
 
-	def apply_conditions(self, **cond):
+	def apply_conditions(self, cond):
 		"""
 		parameter
 			fs_conditions : 재무 조건 <type : >
@@ -82,7 +82,8 @@ class FindCode(SQLAlchemyConnector):
 		# 1. market(com), main_sector(com)
 		# 2. marcap(pri), 
 		searched = self.find_com_condition(cond)
-		self.find_fin_condition(searched, cond)
+		codes = self.find_fin_condition(searched, cond)
+		return (codes)
 
 
 	def find_com_condition(self, cond):
@@ -93,60 +94,56 @@ class FindCode(SQLAlchemyConnector):
 
 	def find_fin_condition(self, searched, cond):
 		searching = self.fin_np
-		print(searched)
-		mask = np.in1d(searched, searching[:,0]) # code filtering from com_condition result
+		mask = np.in1d(searching[:,0], searched) # code filtering from com_condition result
 		searching = searching[mask]
 
 		
 		ref_date = self.ref_date
 		codes = []
 		for i in range(len(ref_date)):
-			print(searching)
-			searching = self.get_correct_date(searched, searching, i, ref_date)
-			conditions = self.check_fin_conditions(searching, cond)
-			searching = searching[conditions]
-			codes.append(searching[:,0], ref_date)
+			search_date = self.get_correct_date(searched, searching, i, ref_date)
+			if (len(searching) == 0):
+				continue
+			conditions = self.check_fin_conditions(search_date, cond)
+			search_date = search_date[conditions]
+			codes.append([search_date[:,0], ref_date[i]])
 
 		return (codes)
 
 
 	def check_com_conditions(self, searching, cond):
 		cond_idx = dict(market=1, main_sector=2)
+		conditions = True
 		con_list = []
 		for k, v in cond_idx.items():
 			if cond[str(k)] == None:
 				continue
 			else:
-				cond = (searching[:,v] >= cond[str(k)][0]) & (searching[:,v] <= cond[str(k)][1])
-				con_list.append(cond)
-
-		for i in range(len(con_list) - 1):
-			cond[i] = cond[i] & cond[i+1]
-		return (cond[len(con_list) - 2])
+				conditions = conditions & (searching[:,v] == cond[str(k)])
+				
+		return (conditions)
 		
 
 	# none check and combine all conditions
 	def check_fin_conditions(self, searching, cond):
 		cond_idx = dict(net_rev=3, net_prf=4, de_r=5, per=6, pbr=8, op_act=9, iv_act=10,
 						fn_act=11, dv_yld=12, dv_pay_r=13, roa=14, roe=15)
+		conditions = True
 		con_list = []
 		for k, v in cond_idx.items():
-			if cond[k] == None:
+			cond_arr = cond[str(k)]
+			if cond_arr[0] == None and cond_arr[1] == None:
 				continue
 			else:
-				cond = (searching[:,v] >= cond[f'{k}'][0]) & (searching[:,v] <= cond[f'{k}'][1])
-				con_list.append(cond)
-		for i in range(len(con_list) - 1):
-			cond[i] = cond[i] & cond[i+1]
-		return (cond[len(con_list) - 2])
+				conditions = conditions & (searching[:,v] >= cond_arr[0]) & (searching[:,v] <= cond_arr[1])
+				
+		return (conditions)
 
 
 	# 만약 리벨런싱기간이 6계월 이상이면 기준일로 부터 과거 가장 최근 재무재표를 참고함
 	def get_correct_date(self, codes, searching, i, ref_date):
-		if i == (len(ref_date) - 1):
-			searching = searching[(searching[:,2] < ref_date[i][0])] # set_date
-		else:
-			searching = searching[(searching[:,2] < ref_date[i][0]) & (searching[:,2] >= ref_date[i+1][0])] # set_date
+		
+		searching = searching[(searching[:,2] < ref_date[i][1].date()) & (searching[:,2] >= ref_date[i][0].date())] # set_date
 		searching = searching[searching[:, 2].argsort()] # sort by date
 		searching = searching[searching[:, 0].argsort(kind='mergesort')] # sort by ID
 		np_list = []
