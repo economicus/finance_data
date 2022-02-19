@@ -86,6 +86,27 @@ class DataCollector(QueryManager):
 				print(e, code)
 
 
+	def get_price_monthly_info(self):
+		self.create_price_monthly_info_table()
+		data = self.bring_additional_data()
+		total = len(self.codes)
+		at = 0;
+		for code in self.codes.itertuples():
+			try:
+				np_adjclose = self.get_adjclose(code.Symbol)
+				np_adddata = self.get_additional_data(data, code.Symbol)
+				np_adjclose, np_adddata = self.compare_date(np_adjclose, np_adddata)
+				np_adjclose, np_adddata = self.give_none(np_adjclose, np_adddata, code)
+				total_code = len(np_adjclose)
+				at_code = 0
+				for i, (x, y) in enumerate(zip(np_adjclose, np_adddata)):
+					self.replace_price_monthly_table(code, x, y, at, total, at_code, total_code)
+					at_code+=1
+				at+=1
+
+			except Exception as e:
+				print(f'{e} : {code}')
+				
 
 if __name__ == "__main__":
 	# finance data path
@@ -96,3 +117,4 @@ if __name__ == "__main__":
 	# dc.get_price_table()
 	# dc.get_finance_table(path, path1)
 	# dc.get_main_sector(path)
+	# dc.get_price_monthly_info()

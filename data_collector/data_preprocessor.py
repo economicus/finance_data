@@ -14,7 +14,6 @@ class DataPreprocessor:
 	def __init__(self):
 		pass
 
-
 	def print_replace_status(self, table, at, total, status_1=None, status_2=None):
 
 		print('[{}] : ({}, {}) #{:04d} / {} rows > REPLACE INTO {} ({} %)[OK]'.\
@@ -185,3 +184,9 @@ class DataPreprocessor:
 		df_np = df.to_numpy()
 		return (df_np)
 
+	def check_monthly(self, ymd_parm):
+		if int(self.ymd) != int(ymd_parm[5:7]):
+			self.ymd = int(ymd_parm[5:7])
+			return True
+		else:
+			return False

@@ -6,6 +6,7 @@ from pymysql import NULL
 class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 	def __init__(self):
 		super().__init__()
+		self.ymd = 0
 
 
 
@@ -140,6 +141,7 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 	def create_finance_table(self):
 		query_1 = """
 			CREATE TABLE IF NOT EXISTS finance (
+				COMP_ID INT,
 				ID INT,
 				Code VARCHAR(20),
 				Quarter DATE,
@@ -156,7 +158,8 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 				DividendPayoutRatio FLOAT(20),
 				ROA FLOAT(20),
 				REO FLOAT(20),
-				FOREIGN KEY (ID) REFERENCES company (ID))
+				PRIMARY KEY (ID),
+				FOREIGN KEY (COMP_ID) REFERENCES company (ID))
 			"""
 		result_proxy = self.connection.execute(query_1)
 		result_proxy.close()
@@ -165,15 +168,17 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 
 	def replace_finance_table(self, code, at, total, path, path1):
 		try:
+			cnt = 0
 			f_list = self.bring_finance_data(code.Symbol, path, path1)
 			for i in range(len(f_list)):
-				query = f"INSERT INTO finance VALUES ({int(code.ID)}, '{code.Symbol}', \
+				query = f"INSERT INTO finance VALUES ({int(code.ID)}, {cnt}, '{code.Symbol}', \
 						'{f_list[i][12]}', {f_list[i][0]}, {f_list[i][1]}, {f_list[i][2]}, \
 						{f_list[i][3]}, {NULL}, {f_list[i][4]}, {f_list[i][5]}, {f_list[i][6]}, \
 						{f_list[i][7]}, {f_list[i][8]}, {f_list[i][9]}, {f_list[i][10]}, \
 						{f_list[i][11]})"
 				result_proxy = self.connection.execute(query)
 				result_proxy.close()
+				cnt+=1
 			self.print_replace_status('finance', at, total, code.Symbol)
 		except Exception as e:
 			print(e)
@@ -187,3 +192,37 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		result_proxy = self.connection.execute(query)
 		result_proxy.close()
 		self.print_update_status('company', at, total, code.Symbol)
+
+
+	def create_price_monthly_info_table(self):
+		query_1 = """
+			CREATE TABLE IF NOT EXISTS price_monthly (
+				ID INT,
+				Date DATE,
+				Open BIGINT(20),
+				High BIGINT(20),
+				Low BIGINT(20),
+				AdjClose BIGINT(20),
+				Volume BIGINT(20),
+				PVolume BIGINT(20),
+				Changes FLOAT(20),
+				Marcap BIGINT(20),
+				Stocks BIGINT(20),
+				Ranks INT,
+				FOREIGN KEY (ID) REFERENCES company (ID))
+			"""
+		result_proxy = self.connection.execute(query_1)
+		result_proxy.close()
+		self.print_create_status('price_monthly')
+
+
+	def replace_price_monthly_table(self, code, x, y, at, total, at_code, total_code):
+		if not self.check_monthly(self.to_date(y[0])):
+			return
+		query = f"INSERT INTO price_monthly VALUES ({int(code.ID)}, '{self.to_date(y[0])}', \
+				{int(x[1])}, {int(x[2])}, {int(x[3])}, {int(x[4])}, {int(x[5])}, \
+				{int(y[2])}, {float(self.str_nan_out(x[6]))}, {int(y[3])}, \
+				{int(y[4])}, {int(y[5])})"
+		result_proxy = self.connection.execute(query)
+		result_proxy.close()
+		self.print_replace_status('price_monthly', at, total, at_code, total_code)
