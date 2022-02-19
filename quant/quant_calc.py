@@ -228,3 +228,4 @@ if __name__ == "__main__":
 	
 	calculate = Calculate()
 	calculate.calculate_profit(code_list)
+	
