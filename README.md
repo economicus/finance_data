@@ -52,15 +52,19 @@
 
 	- columns
 	```
+		COMP_IT company테이블아이디
 		ID 아이디
 		Code 종목코드
 		Quarter 분기
 		NetRevenue 총매출
+		NetRevenueRate 총매출 증가율
 		NetProfitMargin 당기순이익(순수익률)
+		NetProfitMarginRate 당기순이익 증가율
 		DERatio 부채비율
 		PER 
 		PSR 
 		PBR 
+		PCR
 		OperationActivities 영업 현금흐름
 		InvestingActivities 투자 현금흐름
 		FinancingActivities 재무 현금흐름
@@ -69,3 +73,22 @@
 		ROA 
 		REO 
 	```
+
+
+
+- get_price_average_info()
+	- 메년 12월 평균가격 정보
+
+	- columns
+	```
+		ID 아이디
+		Date 날짜
+		AdjClose 12월 평균가격
+	```
+	
+- add_main_sector_tocompany()
+	- main_sector를 company table에 업데이트 시켜준다.
+	
+	
+- get_market_open_info()
+	- 종목별 주식시장 거래일
