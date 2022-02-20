@@ -45,17 +45,14 @@ class DataCollector(QueryManager):
 			except Exception as e:
 				print(f'{e} : {code}')
 
-
-	def get_finance_table(self, path, path1):
+	def get_finance_table(self, path1):
 		self.create_finance_table()
 		total = len(self.codes)
 		at = 0
+		cnt = 0
 		for code in self.codes.itertuples():
-			self.replace_finance_table(code, at, total, path, path1)
+			cnt = self.replace_finance_table(code, at, total, cnt, path1)
 			at+=1
-
-
-
 
 	def get_raw_price_info(self):
 		self.create_raw_price_info_table()
@@ -66,16 +63,7 @@ class DataCollector(QueryManager):
 			self.replace_raw_price_info_table(r, at, total)
 			at+=1
 
-	def get_market_open_info(self):
-		self.create_market_open_info_table()
-		df_open = self.select_raw_price_info_table()
-		total = len(df_open)
-		at = 0
-		for r in df_open.itertuples():
-			self.replace_market_open_info_table(r, at, total)
-			at+=1
-
-	def get_main_sector(self, path):
+	def add_main_sector_tocompany(self, path):
 		total = len(self.codes)
 		at = 0
 		for code in self.codes.itertuples():
@@ -85,6 +73,18 @@ class DataCollector(QueryManager):
 			except Exception as e:
 				print(e, code)
 
+	def get_price_average_info(self):
+		self.create_price_average_table()
+		total = len(self.codes)
+		at = 0
+		for code in self.codes.itertuples():
+			np_adjclose = self.get_adjclose(code.Symbol)
+			total_code = len(np_adjclose)
+			at_code = 0
+			for i, x in enumerate(np_adjclose):
+				self.replace_price_average_table(code, x, at, total, at_code, total_code)
+				at_code+=1
+			at+=1
 
 	def get_price_monthly_info(self):
 		self.create_price_monthly_info_table()
@@ -106,15 +106,24 @@ class DataCollector(QueryManager):
 
 			except Exception as e:
 				print(f'{e} : {code}')
-				
+
+	def get_market_open_info(self):
+		self.create_market_open_info_table()
+		df_open = self.select_raw_price_info_table()
+		total = len(df_open)
+		at = 0
+		for r in df_open.itertuples():
+			self.replace_market_open_info_table(r, at, total)
+			at+=1	
 
 if __name__ == "__main__":
 	# finance data path
-	path = "data/quarter_fs"
-	path1 = "data/annual_fs"
+	path = "data/annual_fs"
 	dc = DataCollector()
 	# dc.get_company_table()
 	# dc.get_price_table()
-	# dc.get_finance_table(path, path1)
-	# dc.get_main_sector(path)
+	# dc.get_finance_table(path)
+
+	# dc.add_main_sector_tocompany(path)
 	# dc.get_price_monthly_info()
+	# dc.get_price_average_info()

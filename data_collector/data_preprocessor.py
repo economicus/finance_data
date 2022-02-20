@@ -135,22 +135,22 @@ class DataPreprocessor:
 		raw_np = raw_df.to_numpy()
 		return (raw_np)
 
-	def bring_finance_data(self, code, path, path1):
+	def bring_finance_data(self, code, path1):
 		try:
 			col = [1, 6, 24, 27, 29, 14, 15, 16, 31, 32, 22, 23]
 			datas = []
 
 			# quarter
-			df = pd.read_csv(f"{path}/{code}.csv")
-			for i in range(1, 9): # 9
-				tmp = df[f"{i}"]
-				data = [self.to_num(tmp[j]) for j in col]
-				data.append(self.get_date(tmp[0]))
-				datas.append(data)
+			# df = pd.read_csv(f"{path}/{code}.csv")
+			# for i in range(1, 9): # 9
+			# 	tmp = df[f"{i}"]
+			# 	data = [self.to_num(tmp[j]) for j in col]
+			# 	data.append(self.get_date(tmp[0]))
+			# 	datas.append(data)
 			
 			# annual
 			df = pd.read_csv(f"{path1}/{code}.csv")
-			for i in range(1, 3): # 9
+			for i in range(1, 9): # 9
 				tmp = df[f"{i}"]
 				data = [self.to_num(tmp[j]) for j in col]
 				data.append(self.get_date(tmp[0]))
@@ -190,3 +190,21 @@ class DataPreprocessor:
 			return True
 		else:
 			return False
+
+	def check_dec(self, ymd_parm, at):
+		if int(self.at) != int(at):
+			self.at = at
+			return 0
+		if int(self.ymd) != int(ymd_parm[5:7]):
+			self.ymd = int(ymd_parm[5:7])
+			if self.ymd == 12:
+				return 1
+			elif self.ymd == 1:
+				return 2
+			else:
+				return 0
+		else:
+			if self.ymd == 12:
+				return 1
+			else:
+				return 0

@@ -7,6 +7,8 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 	def __init__(self):
 		super().__init__()
 		self.ymd = 0
+		self.sum = []
+		self.at = -1
 
 
 
@@ -146,11 +148,14 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 				Code VARCHAR(20),
 				Quarter DATE,
 				NetRevenue BIGINT(20),
-				NetProfitMargin FLOAT(20),
+				NetRevenueRate FLOAT(20),
+				NetProfitMargin BIGINT(20),
+				NetProfitMarginRate FLOAT(20),
 				DERatio FLOAT(20),
 				PER FLOAT(20),
 				PSR FLOAT(20),
 				PBR FLOAT(20),
+				PCR FLOAT(20),
 				OperationActivities BIGINT(20),
 				InvestingActivities BIGINT(20),
 				FinancingActivities BIGINT(20),
@@ -166,23 +171,24 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		self.print_create_status('finance')
 
 
-	def replace_finance_table(self, code, at, total, path, path1):
+	def replace_finance_table(self, code, at, total, cnt, path1):
 		try:
-			cnt = 0
-			f_list = self.bring_finance_data(code.Symbol, path, path1)
+			f_list = self.bring_finance_data(code.Symbol, path1)
 			for i in range(len(f_list)):
 				query = f"INSERT INTO finance VALUES ({int(code.ID)}, {cnt}, '{code.Symbol}', \
-						'{f_list[i][12]}', {f_list[i][0]}, {f_list[i][1]}, {f_list[i][2]}, \
-						{f_list[i][3]}, {NULL}, {f_list[i][4]}, {f_list[i][5]}, {f_list[i][6]}, \
+						'{f_list[i][12]}', {f_list[i][0]}, {NULL}, {f_list[i][1]}, {NULL}, {f_list[i][2]}, \
+						{f_list[i][3]}, {NULL}, {f_list[i][4]}, {NULL}, {f_list[i][5]}, {f_list[i][6]}, \
 						{f_list[i][7]}, {f_list[i][8]}, {f_list[i][9]}, {f_list[i][10]}, \
 						{f_list[i][11]})"
 				result_proxy = self.connection.execute(query)
 				result_proxy.close()
 				cnt+=1
 			self.print_replace_status('finance', at, total, code.Symbol)
+			return (cnt)
 		except Exception as e:
 			print(e)
 			self.print_replace_status('finance', at, total, 'no_files')
+			return (cnt)
 
 
 	def update_company_table(self, code, at, total, path):
@@ -226,3 +232,35 @@ class QueryManager(SQLAlchemyConnector, DataPreprocessor):
 		result_proxy = self.connection.execute(query)
 		result_proxy.close()
 		self.print_replace_status('price_monthly', at, total, at_code, total_code)
+
+		
+	def create_price_average_table(self):
+		query = """
+			CREATE TABLE IF NOT EXISTS price_average (
+				ID INT,
+				Date DATE,
+				AdjClose BIGINT(20),
+				FOREIGN KEY (ID) REFERENCES company (ID))
+				"""
+		result_proxy = self.connection.execute(query)
+		result_proxy.close()
+		self.print_create_status('price_average')
+
+	def replace_price_average_table(self, code, x, at, total, at_code, total_code):
+		check = self.check_dec(self.to_date(x[0]), at)
+		if check == 0:
+			self.sum = []
+			return
+		elif check == 1:
+			self.sum.append(x[4])
+		elif check == 2:
+			try:
+				query = f"INSERT INTO price_average VALUES ({int(code.ID)}, '{self.to_date(x[0])}', \
+					{sum(self.sum) / len(self.sum)})"
+				result_proxy = self.connection.execute(query)
+				result_proxy.close()
+				self.print_replace_status('price_average', at, total, at_code, total_code)
+				self.sum = []
+			except Exception as e:
+				self.sum = []
+				print(e, code)
