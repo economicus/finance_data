@@ -24,6 +24,7 @@ class FindCode(SQLAlchemyConnector):
 		com_df = pd.read_sql(query1, con = self.engine)
 		query2 = f"SELECT * FROM finance"
 		fin_df = pd.read_sql(query2, con = self.engine)
+		
 		# query3 = f"SELECT * FROM price"
 		# pri_df = pd.read_sql(query3, con = self.engine)
 
@@ -35,6 +36,7 @@ class FindCode(SQLAlchemyConnector):
 
 
 	def rebalacing(self, start_date, end_date, rebalance):
+
 		if end_date == None:
 			# end_date = datetime.now().strftime('%Y-%m-%d')
 			end_date = datetime(2021, 12, 31)
@@ -59,6 +61,8 @@ class FindCode(SQLAlchemyConnector):
 	def check_com_conditions(self, searching, cond):
 		cond_idx = dict(marcap=9)
 		conditions = False
+		if len(cond['main_sector']) == 0:
+			conditions = True
 		for i in range(len(cond['main_sector'])):
 			conditions = conditions | (searching[:,2] == cond['main_sector'][i])
 		
@@ -164,6 +168,8 @@ class Calculate:
 	def __init__(self):
 		self.pri_np = self.bring_price_table()
 		self.ref_date = 0
+		self.win_rate = []
+		self.prf = 0
 
 
 	def bring_price_table(self):
@@ -174,17 +180,43 @@ class Calculate:
 		print("complete!")
 		return (pri_np)
 
+	def get_max_loss_rate(self, ret):
+		maxmin = [[max(r[0]), min(r[0])] if len(r[0]) != 1 else [None, None] for r in ret]
+		ret_maxmin = [max(maxmin[0]), min(maxmin[1])]
+		return ((1 + ret_maxmin[1] / 100) / (1 + ret_maxmin[0] / 100) - 1) * 100
+
+	def get_holdings_count(self, code_list):
+		return([len(c[0]) for c in code_list])
+
+	def get_winning_percentage(self, ret):
+		wr = [[True if r[0][i+1] - r[0][i] > 0 else False for i in range(len(r[0])-1)] for r in ret]
+		wr = sum(wr, [])
+		return (wr.count(True) / len(wr) * 100)
+
+	def get_annual_average_return(self, ret):
+		av_c = [[r[0][i+1] - r[0][i] for i in range(len(r[0])-1)] for r in ret]
+		av = [sum(a) / len(a) for a in av_c]
+		return av
+
+	def trunc_dt_0(self, someDate):
+		return datetime(someDate.year, someDate.month, 1)
+
+	def trunc_dt_31(self, someDate):
+		return datetime(someDate.year, someDate.month, 31)
 
 	def get_profit(self, code):
 		try:
 			profits = []
-			profit = self.last_profit
 			pri_np = self.pri_np
-			con_np = pri_np[(pri_np[:,0] == code) & (pri_np[:,1] >= self.ref_date[0]) \
-							& (pri_np[:,1] < self.ref_date[1])]
+			con_np = pri_np[(pri_np[:,0] == code) & \
+					(pri_np[:,1] >= self.trunc_dt_0(self.ref_date[0])) & \
+					(pri_np[:,1] <= self.trunc_dt_31(self.ref_date[1]))]
+			self.prf = self.last_profit
 			for i in range(len(con_np)-1):
-				profit += (con_np[i+1,5] / con_np[i,5]) * 100 - 100
-				profits.append(profit)
+				prf = (con_np[i+1,5] / con_np[i,5]) - 1
+				profit = (self.prf + 1) * (prf + 1) - 1
+				self.prf = prf
+				profits.append(profit*100)
 			return (profits)
 		except Exception as e:
 			print(e, code, self.ref_date)
@@ -192,12 +224,14 @@ class Calculate:
 
 	def calculate_term(self, cal_code, ret_date):
 		self.ref_date = ret_date
+		if len(cal_code) == 0:
+			return [].extend([self.last_profit * 100] * 12), self.ref_date
 		profit = 0
 		result = [self.get_profit(code) for code in cal_code]
 		result_np = np.array(result)
 		profit = result_np.sum(axis=0)
 		profit /= len(cal_code)
-		self.last_profit = profit[-1]
+		self.last_profit = profit[-1] / 100
 		return profit, self.ref_date
 
 	def calculate_profit(self, code_list):
@@ -207,9 +241,9 @@ class Calculate:
 		code_list = code_list[::-1]
 		# calculate each term
 		acc_profit = [self.calculate_term(i[0], i[1]) for i in code_list]
-		# delta_t = time.time() - start
-		# print("calculate Process: ",delta_t,"s")
 		return (acc_profit)
+
+
 
 
 
@@ -217,19 +251,23 @@ if __name__ == "__main__":
 
 	start = time.time()
 	find_code = FindCode()
-	code_list = find_code.apply_conditions(start_date=datetime(2018,1,1), end_date=None, \
-									term=12, market="KOSPI", main_sector=["IT", "소재"], net_rev=[10000, 1000000000], \
+	code_list = find_code.apply_conditions(start_date=datetime(2016,12,30), end_date=None, \
+									term=12, market=None, main_sector=["경기관련소비재"], net_rev=[10000, 1000000000], \
 									net_rev_r=[None, None], net_prf=[None, None], net_prf_r=[None, None], de_r=[None, None], \
-									per=[0, 10], psr=[None, None], pbr=[None, None], pcr=[None, None], op_act=[None, None], iv_act=[None, None], \
+									per=[0, 10], psr=[None, None], pbr=[0, 10], pcr=[None, None], op_act=[0, 1000000], iv_act=[-1000000, 0], \
 									fn_act=[None, None], dv_yld=[None, None], dv_pay_r=[None, None], roa=[None, None], roe=[None, None], \
-									marcap=[None, None], vol=None, pvol=None, sma5=None, sma20=None, \
-									sma60=None, sma120=None, ema5=None, ema20=None, ema60=None, \
-									ema120=None, past_prf_r1=None, past_prf_r3=None, \
-									past_prf_r6=None, past_prf_r12=None)
-	
+									marcap=[None, None])
+
 	calculate = Calculate()
 	ret = calculate.calculate_profit(code_list)
-
-	print(ret)
+	annual_average_return = calculate.get_annual_average_return(ret)
+	winning_percentage = calculate.get_winning_percentage(ret)
+	max_loss_rate = calculate.get_max_loss_rate(ret)
+	holdings_count = calculate.get_holdings_count(code_list)
+	chart = [[r[0][i] for i in range(len(r[0]))] for r in ret]
+	chart = sum(chart, [])
+	return_dict = dict(cumulative_return=ret[-1][0][-1], annual_average_return=annual_average_return[-1], winning_percentage=winning_percentage, \
+		max_loss_rate=max_loss_rate, holdings_count=holdings_count[0], chart=dict(start_date=ret[0][1][0].isoformat(), profit_rate_data=chart))
+	print(return_dict)
 	delta_t = time.time() - start
 	print("total Process : ",delta_t,"s")
