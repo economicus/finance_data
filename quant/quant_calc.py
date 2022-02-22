@@ -42,7 +42,6 @@ class FindCode:
 			if (start_date >= end_date):
 				break
 			self.ref_date.append([end_date, temp - timedelta(days = 1)])
-	
 
 
 
@@ -193,22 +192,22 @@ class Calculate:
 		return datetime(someDate.year, someDate.month, 31)
 
 	def get_profit(self, code):
-		try:
-			profits = []
-			pri_np = self.pri_np
-			con_np = pri_np[(pri_np[:,0] == code) & \
-					(pri_np[:,1] >= self.trunc_dt_0(self.ref_date[0])) & \
-					(pri_np[:,1] <= self.trunc_dt_31(self.ref_date[1]))]
-			self.prf = self.last_profit
-			for i in range(len(con_np)-1):
-				prf = (con_np[i+1,5] / con_np[i,5]) - 1
-				profit = (self.prf + 1) * (prf + 1) - 1
-				self.prf = prf
-				profits.append(profit*100)
-			return (profits)
-		except Exception as e:
-			print(e, code, self.ref_date)
-			return (0)
+		profits = []
+		pri_np = self.pri_np
+		con_np = pri_np[(pri_np[:,0] == code) & \
+				(pri_np[:,1] >= self.trunc_dt_0(self.ref_date[0])) & \
+				(pri_np[:,1] <= self.trunc_dt_31(self.ref_date[1]))]
+		self.prf = self.last_profit
+		for i in range(len(con_np)-1):
+			prf = (con_np[i+1,5] / con_np[i,5]) - 1
+			profit = (self.prf + 1) * (prf + 1) - 1
+			self.prf = prf
+			profits.append(profit*100)
+		if len(profits) != 12:
+			return [0] * 12
+		return (profits)
+		
+
 
 	def calculate_term(self, cal_code, ret_date):
 		self.ref_date = ret_date
@@ -246,11 +245,10 @@ class Calculate:
 
 if __name__ == "__main__":
 
-	# check the path (line 23, 25, 173)
 	start = time.time()
 	find_code = FindCode()
 	code_list = find_code.apply_conditions(start_date=datetime(2016,12,30,0,0,0), end_date=None, \
-									term=12, market=None, main_sector=["IT", "경기관련소비재"], net_rev=[10000, 1000000000], \
+									term=12, market=None, main_sector=['소재', '산업재'], net_rev=[10000, 1000000000], \
 									net_rev_r=[None, None], net_prf=[None, None], net_prf_r=[None, None], de_r=[None, None], \
 									per=[0, 10], psr=[None, None], pbr=[0, 10], pcr=[None, None], op_act=[0, 1000000], iv_act=[-1000000, 0], \
 									fn_act=[None, None], dv_yld=[None, None], dv_pay_r=[None, None], roa=[None, None], roe=[None, None], \
