@@ -1,5 +1,4 @@
 from struct import calcsize
-from connect import SQLAlchemyConnector
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,30 +6,27 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import swifter
 import time
+import dateutil.parser
 
 
 
-class FindCode(SQLAlchemyConnector):
+
+class FindCode:
 	
 	def __init__(self):
-		super().__init__()
 		self.com_np, self.fin_np = self.bring_table()
 		self.ref_date = []
 
 
 	def bring_table(self):
 		print('getting datas...(com_np, fin_np)')
-		query1 = f"SELECT ID,Market,MainSector FROM company"
-		com_df = pd.read_sql(query1, con = self.engine)
-		query2 = f"SELECT * FROM finance"
-		fin_df = pd.read_sql(query2, con = self.engine)
-		
-		# query3 = f"SELECT * FROM price"
-		# pri_df = pd.read_sql(query3, con = self.engine)
+		com_df = pd.read_csv("quant/data/company.csv")
+		com_df = com_df[["ID", "Market", "MainSector"]]
+		fin_df = pd.read_csv("quant/data/finance.csv")
+		fin_df["Quarter"] = fin_df["Quarter"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 
 		com_np = com_df.to_numpy()
 		fin_np = fin_df.to_numpy()
-		# pri_np = pri_df.to_numpy()
 		print('complete!')
 		return (com_np, fin_np)
 
@@ -39,7 +35,7 @@ class FindCode(SQLAlchemyConnector):
 
 		if end_date == None:
 			# end_date = datetime.now().strftime('%Y-%m-%d')
-			end_date = datetime(2021, 12, 31)
+			end_date = datetime(2021, 12, 31,0,0,0)
 		while(True):
 			temp = end_date
 			end_date -= relativedelta(months = rebalance)
@@ -174,7 +170,7 @@ class Calculate:
 
 	def bring_price_table(self):
 		print('getting datas...(pri_np)')
-		pri_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/price_monthly.csv")
+		pri_df = pd.read_csv("quant/data/price_monthly.csv")
 		pri_df["Date"] = pri_df["Date"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 		pri_np = pri_df.to_numpy()
 		print("complete!")
@@ -241,7 +237,16 @@ class Calculate:
 		code_list = code_list[::-1]
 		# calculate each term
 		acc_profit = [self.calculate_term(i[0], i[1]) for i in code_list]
-		return (acc_profit)
+
+		annual_average_return = self.get_annual_average_return(acc_profit)
+		winning_percentage = self.get_winning_percentage(acc_profit)
+		max_loss_rate = self.get_max_loss_rate(acc_profit)
+		holdings_count = self.get_holdings_count(code_list)
+		chart = [[r[0][i] for i in range(len(r[0]))] for r in acc_profit]
+		chart = sum(chart, [])
+		return_dict = dict(cumulative_return=acc_profit[-1][0][-1], annual_average_return=annual_average_return[-1], winning_percentage=winning_percentage, \
+							max_loss_rate=max_loss_rate, holdings_count=holdings_count[0], chart=dict(start_date=acc_profit[0][1][0].isoformat(), profit_rate_data=chart))
+		return (return_dict)
 
 
 
@@ -249,25 +254,18 @@ class Calculate:
 
 if __name__ == "__main__":
 
+	# check the path (line 23, 25, 173)
 	start = time.time()
 	find_code = FindCode()
-	code_list = find_code.apply_conditions(start_date=datetime(2016,12,30), end_date=None, \
-									term=12, market=None, main_sector=["경기관련소비재"], net_rev=[10000, 1000000000], \
+	code_list = find_code.apply_conditions(start_date=datetime(2016,12,30,0,0,0), end_date=None, \
+									term=12, market=None, main_sector=["IT", "경기관련소비재"], net_rev=[10000, 1000000000], \
 									net_rev_r=[None, None], net_prf=[None, None], net_prf_r=[None, None], de_r=[None, None], \
 									per=[0, 10], psr=[None, None], pbr=[0, 10], pcr=[None, None], op_act=[0, 1000000], iv_act=[-1000000, 0], \
 									fn_act=[None, None], dv_yld=[None, None], dv_pay_r=[None, None], roa=[None, None], roe=[None, None], \
 									marcap=[None, None])
 
 	calculate = Calculate()
-	ret = calculate.calculate_profit(code_list)
-	annual_average_return = calculate.get_annual_average_return(ret)
-	winning_percentage = calculate.get_winning_percentage(ret)
-	max_loss_rate = calculate.get_max_loss_rate(ret)
-	holdings_count = calculate.get_holdings_count(code_list)
-	chart = [[r[0][i] for i in range(len(r[0]))] for r in ret]
-	chart = sum(chart, [])
-	return_dict = dict(cumulative_return=ret[-1][0][-1], annual_average_return=annual_average_return[-1], winning_percentage=winning_percentage, \
-		max_loss_rate=max_loss_rate, holdings_count=holdings_count[0], chart=dict(start_date=ret[0][1][0].isoformat(), profit_rate_data=chart))
+	return_dict = calculate.calculate_profit(code_list)
 	print(return_dict)
 	delta_t = time.time() - start
 	print("total Process : ",delta_t,"s")
