@@ -55,19 +55,11 @@ class FindCode:
 
 	# none check and combine all conditions
 	def check_com_conditions(self, searching, cond):
-		cond_idx = dict(marcap=9)
 		conditions = False
 		if len(cond['main_sector']) == 0:
 			conditions = True
 		for i in range(len(cond['main_sector'])):
 			conditions = conditions | (searching[:,2] == cond['main_sector'][i])
-		
-		for k, v in cond_idx.items():
-			cond_arr = cond[str(k)]
-			if cond_arr[0] == None and cond_arr[1] == None:
-				continue
-			else:
-				conditions = conditions & (searching[:,v] >= cond_arr[0]) & (searching[:,v] <= cond_arr[1])
 
 		return (conditions)
 
