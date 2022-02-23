@@ -192,20 +192,14 @@ class Calculate:
 
 	def get_profit(self, code, pri_np):
 		profits = []
-		start = time.time()
 
 		con_np = pri_np[(pri_np[:,0] == code)]
 		self.prf = self.last_profit
-		delta_t = time.time() - start
-		print("====find return : ",delta_t,"s")
-		start = time.time()
 		for i in range(len(con_np)-1):
 			prf = (con_np[i+1,5] / con_np[i,5]) - 1
 			profit = (self.prf + 1) * (prf + 1) - 1
 			self.prf = prf
 			profits.append(profit*100)
-		delta_t = time.time() - start
-		print("====calc return : ",delta_t,"s")
 		if len(profits) != 12:
 			return [0] * 12
 		return (profits)
@@ -232,13 +226,9 @@ class Calculate:
 		self.last_profit = 0
 		code_list = code_list[::-1]
 		# calculate each term
-		start = time.time()
 		acc_profit = [self.calculate_term(i[0], i[1]) for i in code_list]
-		delta_t = time.time() - start
-		print("calculate return : ",delta_t,"s")
 
 
-		start = time.time()
 
 		annual_average_return = self.get_annual_average_return(acc_profit)
 		winning_percentage = self.get_winning_percentage(acc_profit)
@@ -246,8 +236,6 @@ class Calculate:
 		holdings_count = self.get_holdings_count(code_list)
 		chart = [[r[0][i] for i in range(len(r[0]))] for r in acc_profit]
 		chart = sum(chart, [])
-		delta_t = time.time() - start
-		print("additional return : ",delta_t,"s")
 		return_dict = dict(cumulative_return=acc_profit[-1][0][-1], annual_average_return=annual_average_return[-1], winning_percentage=winning_percentage, \
 							max_loss_rate=max_loss_rate, holdings_count=holdings_count[0], chart=dict(start_date=acc_profit[0][1][0].isoformat(), profit_rate_data=chart))
 		return (return_dict)
