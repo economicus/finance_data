@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 import swifter
 import time
 import dateutil.parser
+from numba import jit, njit
 
 
 
@@ -20,9 +21,9 @@ class FindCode:
 
 	def bring_table(self):
 		print('getting datas...(com_np, fin_np)')
-		com_df = pd.read_csv("quant/data/company.csv")
+		com_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/company.csv")
 		com_df = com_df[["ID", "Market", "MainSector"]]
-		fin_df = pd.read_csv("quant/data/finance.csv")
+		fin_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/finance.csv")
 		fin_df["Quarter"] = fin_df["Quarter"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 
 		com_np = com_df.to_numpy()
@@ -30,6 +31,11 @@ class FindCode:
 		print('complete!')
 		return (com_np, fin_np)
 
+	def trunc_dt_0(self, someDate):
+		return datetime(someDate.year, someDate.month, 1)
+
+	def trunc_dt_31(self, someDate):
+		return datetime(someDate.year, someDate.month, 31)
 
 	def rebalacing(self, start_date, end_date, rebalance):
 
@@ -41,7 +47,7 @@ class FindCode:
 			end_date -= relativedelta(months = rebalance)
 			if (start_date >= end_date):
 				break
-			self.ref_date.append([end_date, temp - timedelta(days = 1)])
+			self.ref_date.append([self.trunc_dt_0(end_date), self.trunc_dt_31(temp - timedelta(days = 1))])
 
 
 
@@ -114,7 +120,6 @@ class FindCode:
 		searched = np.array(np_list)
 		return (searched)
 
-
 	def apply_conditions(self, **cond):
 		"""
 		:parameter
@@ -161,7 +166,7 @@ class Calculate:
 
 	def bring_price_table(self):
 		print('getting datas...(pri_np)')
-		pri_df = pd.read_csv("quant/data/price_monthly.csv")
+		pri_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/price_monthly.csv")
 		pri_df["Date"] = pri_df["Date"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 		pri_np = pri_df.to_numpy()
 		print("complete!")
@@ -185,24 +190,22 @@ class Calculate:
 		av = [sum(a) / len(a) for a in av_c]
 		return av
 
-	def trunc_dt_0(self, someDate):
-		return datetime(someDate.year, someDate.month, 1)
-
-	def trunc_dt_31(self, someDate):
-		return datetime(someDate.year, someDate.month, 31)
-
-	def get_profit(self, code):
+	def get_profit(self, code, pri_np):
 		profits = []
-		pri_np = self.pri_np
-		con_np = pri_np[(pri_np[:,0] == code) & \
-				(pri_np[:,1] >= self.trunc_dt_0(self.ref_date[0])) & \
-				(pri_np[:,1] <= self.trunc_dt_31(self.ref_date[1]))]
+		start = time.time()
+
+		con_np = pri_np[(pri_np[:,0] == code)]
 		self.prf = self.last_profit
+		delta_t = time.time() - start
+		print("====find return : ",delta_t,"s")
+		start = time.time()
 		for i in range(len(con_np)-1):
 			prf = (con_np[i+1,5] / con_np[i,5]) - 1
 			profit = (self.prf + 1) * (prf + 1) - 1
 			self.prf = prf
 			profits.append(profit*100)
+		delta_t = time.time() - start
+		print("====calc return : ",delta_t,"s")
 		if len(profits) != 12:
 			return [0] * 12
 		return (profits)
@@ -214,7 +217,10 @@ class Calculate:
 		if len(cal_code) == 0:
 			return [].extend([self.last_profit * 100] * 12), self.ref_date
 		profit = 0
-		result = [self.get_profit(code) for code in cal_code]
+		pri_np = self.pri_np
+		pri_np=pri_np[(pri_np[:,1] >= self.ref_date[0]) & \
+					(pri_np[:,1] <= self.ref_date[1])]
+		result = [self.get_profit(code, pri_np) for code in cal_code]
 		result_np = np.array(result)
 		profit = result_np.sum(axis=0)
 		profit /= len(cal_code)
@@ -222,12 +228,17 @@ class Calculate:
 		return profit, self.ref_date
 
 	def calculate_profit(self, code_list):
-		start = time.time()
-		acc_profit = []
+
 		self.last_profit = 0
 		code_list = code_list[::-1]
 		# calculate each term
+		start = time.time()
 		acc_profit = [self.calculate_term(i[0], i[1]) for i in code_list]
+		delta_t = time.time() - start
+		print("calculate return : ",delta_t,"s")
+
+
+		start = time.time()
 
 		annual_average_return = self.get_annual_average_return(acc_profit)
 		winning_percentage = self.get_winning_percentage(acc_profit)
@@ -235,6 +246,8 @@ class Calculate:
 		holdings_count = self.get_holdings_count(code_list)
 		chart = [[r[0][i] for i in range(len(r[0]))] for r in acc_profit]
 		chart = sum(chart, [])
+		delta_t = time.time() - start
+		print("additional return : ",delta_t,"s")
 		return_dict = dict(cumulative_return=acc_profit[-1][0][-1], annual_average_return=annual_average_return[-1], winning_percentage=winning_percentage, \
 							max_loss_rate=max_loss_rate, holdings_count=holdings_count[0], chart=dict(start_date=acc_profit[0][1][0].isoformat(), profit_rate_data=chart))
 		return (return_dict)
