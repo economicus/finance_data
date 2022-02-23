@@ -5,6 +5,7 @@ from marcap import marcap_data
 from query_manager import QueryManager
 import pandas as pd
 from datetime import datetime
+from crolling.combine.extract import make_one_csv
 
 class DataCollector(QueryManager):
 
@@ -90,7 +91,7 @@ class DataCollector(QueryManager):
 		self.create_price_monthly_info_table()
 		data = self.bring_additional_data()
 		total = len(self.codes)
-		at = 0;
+		at = 0
 		for code in self.codes.itertuples():
 			try:
 				np_adjclose = self.get_adjclose(code.Symbol)
@@ -107,6 +108,7 @@ class DataCollector(QueryManager):
 			except Exception as e:
 				print(f'{e} : {code}')
 
+
 	def get_market_open_info(self):
 		self.create_market_open_info_table()
 		df_open = self.select_raw_price_info_table()
@@ -115,6 +117,12 @@ class DataCollector(QueryManager):
 		for r in df_open.itertuples():
 			self.replace_market_open_info_table(r, at, total)
 			at+=1	
+
+
+	def make_one_file(self, save_path):
+		make_one_csv(self.codes, save_path)
+			
+
 
 if __name__ == "__main__":
 	# finance data path
@@ -127,3 +135,5 @@ if __name__ == "__main__":
 	# dc.add_main_sector_tocompany(path)
 	# dc.get_price_monthly_info()
 	# dc.get_price_average_info()
+	save_path = '/Users/choewonjun/Documents/coding/crolling/finished'
+	dc.make_one_file(save_path)
