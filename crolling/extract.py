@@ -53,9 +53,9 @@ def extract_from_naver(i, n_df):
 	data.append(float(n_df.loc[32, i].replace(',', ''))) # 배당성향
 	data.append(round(int(n_df.loc[2, i].replace(',', '') + '00000') / int(n_df.loc[1, i].replace(',', '') + '00000') * 100, 2) if int(n_df.loc[1, i].replace(',', '') + '00000') != 0 else 0 ) # 영업이익률
 	data.append(round(int(n_df.loc[5, i].replace(',', '') + '00000') / int(n_df.loc[1, i].replace(',', '') + '00000') * 100, 2) if int(n_df.loc[1, i].replace(',', '') + '00000') != 0 else 0 ) # 당기순이익률
-	data.append(round(int(n_df.loc[1, i].replace(',', '') + '00000') / int(n_df.loc[1, str(int(i) - 1)].replace(',', '') + '00000') * 100 - 100, 2) if  int(n_df.loc[1, str(int(i) - 1)].replace(',', '') + '00000') != 0 else 0) # 매출액증가율
-	data.append(round(int(n_df.loc[2, i].replace(',', '') + '00000') / int(n_df.loc[2, str(int(i) - 1)].replace(',', '') + '00000') * 100 - 100, 2) if  int(n_df.loc[2, str(int(i) - 1)].replace(',', '') + '00000') != 0 else 0) # 영업이익증가율
-	data.append(round(int(n_df.loc[5, i].replace(',', '') + '00000') / int(n_df.loc[5, str(int(i) - 1)].replace(',', '') + '00000') * 100 - 100, 2) if  int(n_df.loc[5, str(int(i) - 1)].replace(',', '') + '00000') != 0 else 0) # 당기순이익증가율
+	data.append(round(int(n_df.loc[1, i].replace(',', '') + '00000') / int(n_df.loc[1, str(int(i) - 1)].replace(',', '') + '00000') * 100 - 100, 2) if int(i) != 1 and int(n_df.loc[1, str(int(i) - 1)].replace(',', '') + '00000') != 0 else 0) # 매출액증가율
+	data.append(round(int(n_df.loc[2, i].replace(',', '') + '00000') / int(n_df.loc[2, str(int(i) - 1)].replace(',', '') + '00000') * 100 - 100, 2) if int(i) != 1 and  int(n_df.loc[2, str(int(i) - 1)].replace(',', '') + '00000') != 0 else 0) # 영업이익증가율
+	data.append(round(int(n_df.loc[5, i].replace(',', '') + '00000') / int(n_df.loc[5, str(int(i) - 1)].replace(',', '') + '00000') * 100 - 100, 2) if int(i) != 1 and  int(n_df.loc[5, str(int(i) - 1)].replace(',', '') + '00000') != 0 else 0) # 당기순이익증가율
 	data.append(None) # 이자보상배율
 	data.append(None) # 유동비율
 	data.append(round(int(n_df.loc[9, i].replace(',', '') + '00000') / int(n_df.loc[8, i].replace(',', '') + '00000') * 100, 2) if int(n_df.loc[8, i].replace(',', '') + '00000') != 0 else 0) # 부채비율
@@ -83,11 +83,12 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 	codes, _  = read_code_csv(comp_id_path)
 	count = 0
 	KONEX_list = except_KONEX_list(comp_id_path)
+	no_december = ['169330', '190650' ,'357120', '950210', '338100']
 	# 코넥스가 들어오는 경우 예외처리 필요
 	for code in codes:
 		code = '{:0>6}'.format(code)
-		# if code != '373220':
-		# 	continue
+		if code not in no_december:
+			continue
 
 		if code == '334890' or code == '402340' or code in KONEX_list: # 예외 케이스
 			continue
@@ -109,8 +110,13 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 					count += 1
 					continue			
 				# print(n_df.loc[0, i])
+
 				if int(n_df.loc[0, i].split('/')[0]) <= 2018 or int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
-					continue
+					if code in no_december: # 예외처리 (실적이 12월에 안나는 회사)
+						pass
+					else:
+						continue
+
 				g_df.loc[len(g_df)] = extract_from_naver(i, n_df)
 			csv_df = g_df
 
@@ -130,8 +136,11 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 					count += 1
 					continue
 				if int(n_df.loc[0, i].split('/')[0]) <= 2018 or int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
-					continue
-				print(len(extract_from_naver(i, n_df)))
+					if code in no_december: # 예외처리 (실적이 12월에 안나는 회사)
+						pass
+					else:
+						continue
+				# print(len(extract_from_naver(i, n_df)))
 				datas.append(extract_from_naver(i, n_df))
 				count += 1
 			cols = ['구분', '자산', '유동자산', '비유동자산', '기타자산', '부채', '유동부채',
@@ -185,11 +194,18 @@ def make_one_csv(comp_id_path, save_path):
 		code = '{:0>6}'.format(code)
 		id = comp_ids[i]
 		try:
-			df = pd.read_csv(f'{save_path}/{code}.csv', encoding='cp949', index_col=False)
+			before_df = pd.read_csv(f'{save_path}/{code}.csv', encoding='cp949', index_col=False)
 			print(code, id)
 		except:
 			print(f'{code} is excepted')
 			continue
+
+		remove_list = [] # 어떠한 정보도 없는 행 지우기
+		for i in range(len(before_df)):
+			if before_df.iat[i, 0] == 0:
+				remove_list.append(i)
+		df = before_df.drop(remove_list, axis = 0)
+
 		df.insert(0, "Code", [code] * len(df))
 		df.insert(0, "ID", [i for i in range(count, count + len(df))])
 		df.insert(0, "COMP_ID", [id] * len(df))
