@@ -138,7 +138,7 @@ class Calculate(DataLoad):
 		return ((1 + min(ret) / 100) / (1 + max(ret) / 100) - 1) * 100
 
 	def get_holdings_count(self, code_list):
-		return([len(c) for c in code_list])
+		return([len(c[0]) for c in code_list])
 
 	def get_winning_percentage(self, ret):
 		wr = [True if ret[i+1] - ret[i] > 0 else False for i in range(len(ret)-1)]
