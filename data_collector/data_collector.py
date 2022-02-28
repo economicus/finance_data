@@ -90,6 +90,7 @@ class DataCollector(QueryManager):
 		self.create_price_monthly_info_table()
 		data = self.bring_additional_data()
 		total = len(self.codes)
+		error_list = []
 		at = 0;
 		for code in self.codes.itertuples():
 			try:
@@ -105,7 +106,10 @@ class DataCollector(QueryManager):
 				at+=1
 
 			except Exception as e:
+				error_list.append([e, code])
 				print(f'{e} : {code}')
+		
+		print(error_list)
 
 	def get_market_open_info(self):
 		self.create_market_open_info_table()
@@ -116,6 +120,7 @@ class DataCollector(QueryManager):
 			self.replace_market_open_info_table(r, at, total)
 			at+=1	
 
+
 if __name__ == "__main__":
 	# finance data path
 	path = "data/annual_fs"
@@ -125,5 +130,5 @@ if __name__ == "__main__":
 	# dc.get_finance_table(path)
 
 	# dc.add_main_sector_tocompany(path)
-	# dc.get_price_monthly_info()
+	dc.get_price_monthly_info()
 	# dc.get_price_average_info()
