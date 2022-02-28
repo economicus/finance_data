@@ -12,9 +12,9 @@ class DataLoad:
 
 	def bring_datas(self):
 		print("getting datas...")
-		com_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/company.csv")
-		fin_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/finance.csv", encoding='cp949')
-		pri_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/price_monthly.csv")
+		com_df = pd.read_csv("./quant/data/company.csv")
+		fin_df = pd.read_csv("./quant/data/finance.csv", encoding='cp949')
+		pri_df = pd.read_csv("./quant/data/price_monthly.csv")
 
 		com_df = com_df[["ID", "MainSector"]]
 
@@ -98,7 +98,7 @@ class FindCode(DataLoad):
 		fin_np = fin_np[conditions]
 		
 		# return True False list of IDs
-		return ([fin_np[:,0] , ref_date])
+		return [fin_np[:,0] , ref_date]
 
 	def apply_finance(self, cond, conditions):
 		fin_np = self.fin_np
@@ -113,7 +113,7 @@ class FindCode(DataLoad):
 		self.rebalacing(cond["start_date"], cond["end_date"])
 		conditions = self.apply_company(cond["main_sector"])
 		conditions = self.apply_finance(cond, conditions)
-		return (conditions[::-1])
+		return conditions[::-1]
 
 
 class Calculate(DataLoad):
@@ -132,11 +132,11 @@ class Calculate(DataLoad):
 		return ((1 + min(ret) / 100) / (1 + max(ret) / 100) - 1) * 100
 
 	def get_holdings_count(self, code_list):
-		return([len(c[0]) for c in code_list])
+		return[len(c[0]) for c in code_list]
 
 	def get_winning_percentage(self, ret):
 		wr = [True if ret[i+1] - ret[i] > 0 else False for i in range(len(ret)-1)]
-		return (wr.count(True) / len(wr) * 100)
+		return wr.count(True) / len(wr) * 100
 
 	def get_annual_average_return(self, ret):
 		av_c = [[r[i+1] - r[i] for i in range(len(r)-1)] for r in ret]
@@ -155,7 +155,7 @@ class Calculate(DataLoad):
 			profits.append(profit*100)
 		if len(profits) != 12:
 			return [0] * 12
-		return (profits)
+		return profits
 		
 
 	def calculate_each_term(self, codes, ref_date):
@@ -200,10 +200,9 @@ class QuantCalc(FindCode, Calculate):
 	def execute(self, **cond):
 		# apply conditions to filter the stocks
 		code_list = self.apply_conditions(cond)
-		print(code_list)
 		# put filtered stocks and calculate profits
 		return_dict = self.calculate_profit(code_list, cond)
-		print(return_dict)
+		return return_dict
 
 
 
