@@ -18,17 +18,16 @@ class DataLoad:
 
 		com_df = com_df[["ID", "MainSector"]]
 
-		# fin_df = fin_df[["COMP_ID", "구분", "매출액", "매출액증가율(전년동기)", \
-		# 				"당기순이익", "당기순이익증가율(전년동기)", "부채비율", \
-		# 				"PER", "PSR", "PBR", "PCR", "영업활동현금흐름", \
-		# 				"투자활동현금흐름", "재무활동현금흐름", "배당수익률(보통주,현금+주식)", \
-		# 				"배당성향(현금+주식)", "ROA(당기순이익)", "ROE(당기순이익)"]]
+		fin_df = fin_df[["COMP_ID", "구분", "매출액", "매출액증가율(전년동기)", \
+						"당기순이익", "당기순이익증가율(전년동기)", "부채비율", \
+						"PER", "PSR", "PBR", "PCR", "영업활동현금흐름", \
+						"투자활동현금흐름", "재무활동현금흐름", "배당수익률(보통주,현금+주식)", \
+						"배당성향(현금+주식)", "ROA(당기순이익)", "ROE(당기순이익)"]]
 
-		# fin_df.dropna(subset = ["구분"], inplace=True)
+		fin_df.dropna(subset = ["구분"], inplace=True)
 		# quarter
-		# fin_df["구분"] = fin_df["구분"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
+		fin_df["구분"] = fin_df["구분"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 
-		fin_df["Quarter"] = fin_df["Quarter"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 		pri_df["Date"] = pri_df["Date"].swifter.apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
 
 		com_np = com_df.to_numpy()
@@ -45,8 +44,7 @@ class FindCode(DataLoad):
 		self.ref_date = []
 	
 	def trunc_dt_31(self, someDate):
-		return datetime(someDate.year - 1, 12, 1, 0, 0, 0, 0)
-		# return datetime(someDate.year - 1, 12, 31, 0, 0, 0, 0, tzinfo=timezone.utc)
+		return datetime(someDate.year - 1, 12, 31, 0, 0, 0, 0)
 
 	# list of rebalacing term
 	def rebalacing(self, start, end):
@@ -80,16 +78,12 @@ class FindCode(DataLoad):
 	def apply_each_finance(self, ref_date, fin_np, cond):
 
 		# ref_date filtered
-		fin_np = fin_np[fin_np[:,3] == self.trunc_dt_31(ref_date[0]).date()]
-		# fin_np = fin_np[fin_np[:,1] == self.trunc_dt_31(ref_date[0])]
+		fin_np = fin_np[fin_np[:,1] == self.trunc_dt_31(ref_date[0]).date()]
 
 		# numpy indexes
-		cond_idx = dict(net_rev=4, net_rev_r=5, net_prf=6, net_prf_r=7, de_r=8, \
-						per=9, psr=10, pbr=11, pcr=12, op_act=13, iv_act=14,
-						fn_act=15, dv_yld=16, dv_pay_r=17, roa=18, roe=19)
-		# cond_idx = dict(net_rev=2, net_rev_r=3, net_prf=4, net_prf_r=5, de_r=6, \
-		# 				per=7, psr=8, pbr=9, pcr=10, op_act=11, iv_act=12,
-		# 				fn_act=13, dv_yld=14, dv_pay_r=15, roa=16, roe=17)
+		cond_idx = dict(net_rev=2, net_rev_r=3, net_prf=4, net_prf_r=5, de_r=6, \
+						per=7, psr=8, pbr=9, pcr=10, op_act=11, iv_act=12,
+						fn_act=13, dv_yld=14, dv_pay_r=15, roa=16, roe=17)
 		conditions = True
 
 		# filter each finance conditions with AND operater
@@ -104,7 +98,7 @@ class FindCode(DataLoad):
 		fin_np = fin_np[conditions]
 		
 		# return True False list of IDs
-		return ([fin_np[:,0] , ref_date])
+		return [fin_np[:,0] , ref_date]
 
 	def apply_finance(self, cond, conditions):
 		fin_np = self.fin_np
@@ -119,7 +113,7 @@ class FindCode(DataLoad):
 		self.rebalacing(cond["start_date"], cond["end_date"])
 		conditions = self.apply_company(cond["main_sector"])
 		conditions = self.apply_finance(cond, conditions)
-		return (conditions[::-1])
+		return conditions[::-1]
 
 
 class Calculate(DataLoad):
@@ -138,11 +132,11 @@ class Calculate(DataLoad):
 		return ((1 + min(ret) / 100) / (1 + max(ret) / 100) - 1) * 100
 
 	def get_holdings_count(self, code_list):
-		return([len(c[0]) for c in code_list])
+		return[len(c[0]) for c in code_list]
 
 	def get_winning_percentage(self, ret):
 		wr = [True if ret[i+1] - ret[i] > 0 else False for i in range(len(ret)-1)]
-		return (wr.count(True) / len(wr) * 100)
+		return wr.count(True) / len(wr) * 100
 
 	def get_annual_average_return(self, ret):
 		av_c = [[r[i+1] - r[i] for i in range(len(r)-1)] for r in ret]
@@ -161,7 +155,7 @@ class Calculate(DataLoad):
 			profits.append(profit*100)
 		if len(profits) != 12:
 			return [0] * 12
-		return (profits)
+		return profits
 		
 
 	def calculate_each_term(self, codes, ref_date):
@@ -208,29 +202,29 @@ class QuantCalc(FindCode, Calculate):
 		code_list = self.apply_conditions(cond)
 		# put filtered stocks and calculate profits
 		return_dict = self.calculate_profit(code_list, cond)
-		print(return_dict)
+		return return_dict
 
 
 
 if __name__ == "__main__":
 	a = QuantCalc()
 	a.execute(start_date=datetime(2016, 3, 31, 0, 0, 0, 0, tzinfo=timezone.utc), 
-				end_date=None, 
-				main_sector=['소재', '산업재'], 
-				net_rev=dict(min=10000, max=1000000000), 
-				net_rev_r=dict(min=None, max=None), 
-				net_prf=dict(min=None, max=None), 
-				net_prf_r=dict(min=None, max=None), 
-				de_r=dict(min=None, max=None), 
-				per=dict(min=0, max=10), 
-				psr=dict(min=None, max=None), 
-				pbr=dict(min=0, max=10), 
-				pcr=dict(min=None, max=None), 
-				op_act=dict(min=0, max=1000000), 
-				iv_act=dict(min=-1000000, max=0), 
-				fn_act=dict(min=None, max=None), 
-				dv_yld=dict(min=None, max=None), 
-				dv_pay_r=dict(min=None, max=None), 
-				roa=dict(min=None, max=None), 
-				roe=dict(min=None, max=None), 
-				marcap=dict(min=None, max=None))
+				end_date=datetime(2021, 3, 31, 0, 0, 0, 0, tzinfo=timezone.utc), 
+				main_sector=['IT'],
+				net_rev=dict(min=-10000, max=1000000),
+				net_rev_r=dict(min=None, max=None),
+				net_prf=dict(min=-100, max=100),
+				net_prf_r=dict(min=None, max=None),
+				de_r=dict(min=-100.0, max=100.0),
+				per=dict(min=-100.0, max=100.0),
+				psr=dict(min=None, max=None),
+				pbr=dict(min=-100.0, max=100.0),
+				pcr=dict(min=None, max=None),
+				op_act=dict(min=-100.0, max=100.0),
+				iv_act=dict(min=-100.0, max=100.0),
+				fn_act=dict(min=-100.0, max=100.0),
+				dv_yld=dict(min=-100.0, max=100.0),
+				dv_pay_r=dict(min=-100.0, max=100.0),
+				roa=dict(min=-100.0, max=100.0),
+				roe=dict(min=-100.0, max=100.0),
+				marcap=dict(min=-100.0, max=100.0))
