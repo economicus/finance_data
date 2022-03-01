@@ -10,11 +10,25 @@ def read_code_csv(path):
 	return (codes, comp_id)
 
 
+def id_to_code(codes, path):
+	code_list = []
+	df = pd.read_csv(path)
+	for i in codes:
+		code = df[df['ID'] == int(i)]['Symbol']
+		code_list.append(int(code))
+	return code_list
+	
+
+
 def except_kor(g_df):
 	""" 예외 케이스 처리 함수 """
-	kor = ['흑전', '적전', '적지']
+	kor = ['흑전', '적전', '적지', '완전잠식']
+	g_df['매출액증가율(전년동기)'] = g_df['매출액증가율(전년동기)'].apply(lambda x : 0 if x in kor else x)
 	g_df['영업이익증가율(전년동기)'] = g_df['영업이익증가율(전년동기)'].apply(lambda x : 0 if x in kor else x)
 	g_df['당기순이익증가율(전년동기)'] = g_df['당기순이익증가율(전년동기)'].apply(lambda x : 0 if x in kor else x)
+	g_df['부채비율'] = g_df['부채비율'].apply(lambda x : 0 if x in kor else x)
+	g_df['ROE(영업이익)'] = g_df['ROE(영업이익)'].apply(lambda x : 0 if x in kor else x)
+	g_df['ROE(당기순이익)'] = g_df['ROE(당기순이익)'].apply(lambda x : 0 if x in kor else x)
 	return g_df
 
 def except_KONEX_list(comp_id_path):
@@ -86,16 +100,17 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 	codes, _  = read_code_csv(comp_id_path)
 	count = 0
 	KONEX_list = except_KONEX_list(comp_id_path)
-	no_december = ['169330', '190650' ,'357120', '950210', '338100']
+	no_december = ['169330', '190650' ,'357120', '950210', '338100', '365550']
 	# 코넥스가 들어오는 경우 예외처리 필요
 	for code in codes:
 		code = '{:0>6}'.format(code)
-		if code not in no_december:
-			continue
+		# if code != '357250':
+		# 	continue
 
 		if code == '334890' or code == '402340' or code in KONEX_list: # 예외 케이스
+			print('Exception case')
 			continue
-
+		
 		try:
 			n_df = pd.read_csv(f'{naver_path}/{code}.csv')
 			g_df = pd.read_csv(f'{git_path}/{code}.csv', encoding='cp949')
@@ -205,7 +220,7 @@ def make_one_csv(comp_id_path, save_path):
 
 		remove_list = [] # 어떠한 정보도 없는 행 지우기
 		for i in range(len(before_df)):
-			if before_df.iat[i, 0] == 0:
+			if before_df.iat[i, 4] == 0:
 				remove_list.append(i)
 		df = before_df.drop(remove_list, axis = 0)
 
@@ -214,6 +229,10 @@ def make_one_csv(comp_id_path, save_path):
 		df.insert(0, "COMP_ID", [id] * len(df))
 
 		df = df.astype({'구분':'str'})
+		df = df.astype({'매출액증가율(전년동기)':'float64'})
+		df = df.astype({'부채비율':'float64'})
+		df = df.astype({'ROE(영업이익)':'float64'})
+		df = df.astype({'ROE(당기순이익)':'float64'})
 		if flag == 0:
 			return_date = df
 		else:
@@ -233,11 +252,14 @@ if __name__ == "__main__":
 	save_path = '/Users/choewonjun/Documents/coding/crolling/combine_24/crolling/done_finance' 
 	comp_id_path = 'company.csv'
 
-	start_tiem = time.time()
+	# start_tiem = time.time()
 
 	# union_structure(save_path)
 	# combine_git_naver(naver_path, git_path, comp_id_path, save_path)
-	make_one_csv(comp_id_path, save_path)
-	end_time = time.time()
-	print(end_time - start_tiem)
+	# make_one_csv(comp_id_path, save_path)
+	# end_time = time.time()
+	# print(end_time - start_tiem)
+
+	# list = id_to_code([1154, 517, 648, 394, 651, 143, 912, 273, 281, 1437, 2211, 1957, 1710, 50, 955, 2370, 2374, 841, 2122, 333, 619, 2164, 2293], comp_id_path)
+	# print(list)
 	
