@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 import swifter
 import time
 import itertools
+from numba import jit
 
 class DataLoad:
 	def __init__(self):
@@ -12,9 +13,9 @@ class DataLoad:
 
 	def bring_datas(self):
 		print("getting datas...")
-		com_df = pd.read_csv("./quant/data/company.csv")
-		fin_df = pd.read_csv("./quant/data/finance.csv", encoding='cp949')
-		pri_df = pd.read_csv("./quant/data/price_monthly.csv")
+		com_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data/quant/data/company.csv")
+		fin_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data//quant/data/finance.csv", encoding='cp949')
+		pri_df = pd.read_csv("/Users/alvinlee/Git_Folder/stock/data//quant/data/price_monthly.csv")
 
 		com_df = com_df[["ID", "MainSector"]]
 
@@ -128,7 +129,6 @@ class Calculate(DataLoad):
 	def trunc_dt_430(self, someDate):
 		return datetime.timestamp(datetime(someDate.year, someDate.month + 1, 30, 0, 0, 0, 0))
 
-
 	def get_max_loss_rate(self, ret):
 		return ((1 + min(ret) / 100) / (1 + max(ret) / 100) - 1) * 100
 
@@ -144,6 +144,13 @@ class Calculate(DataLoad):
 		av = [sum(a) / len(a) for a in av_c]
 		return av
 
+	def get_heatmap(self, code_list):
+		code_list = [cl[0] for cl in code_list]
+		code_list = list(itertools.chain(*code_list))
+		code_np = np.array(code_list)
+		unique, counts = np.unique(code_np, return_counts=True)
+		return dict(zip(unique, counts))
+
 	def calculate_each_code(self, code, pri_np):
 		profits = []
 		pri_np = pri_np[(pri_np[:,0] == code)]
@@ -157,8 +164,7 @@ class Calculate(DataLoad):
 		if len(profits) != 12:
 			return [0] * 12
 		return (profits)
-		
-
+	
 	def calculate_each_term(self, codes, ref_date):
 		if len(codes) == 0:
 			return [self.last_profit * 100.0] * 12
@@ -177,6 +183,7 @@ class Calculate(DataLoad):
 	def calculate_profit(self, code_list, cond):
 		self.last_profit = 0
 		acc_profit = [self.calculate_each_term(cl[0], cl[1])for cl in code_list]
+		heatmap = self.get_heatmap(code_list)
 		annual_average_return = self.get_annual_average_return(acc_profit)
 		chart = list(itertools.chain(*acc_profit))
 		chart.insert(0, 0.0)
@@ -189,7 +196,8 @@ class Calculate(DataLoad):
 							max_loss_rate=max_loss_rate,
 							holdings_count=holdings_count[-1],
 							chart=dict(start_date=cond["start_date"],
-										profit_rate_data=chart))
+										profit_rate_data=chart),
+							heatmap=heatmap)
 		return return_dict
 
 class QuantCalc(FindCode, Calculate):
