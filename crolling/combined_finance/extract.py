@@ -18,7 +18,53 @@ def id_to_code(codes, path):
 		code_list.append(int(code))
 	return code_list
 	
+def except_for_git_make_same_columns(g_df):
+	""" 칼럼 순서가 바뀐 경우의 예외처리 함수 """
+	if g_df.iloc[:,1].name == 'DPS(보통주,현금+주식)':
+		col_0 = g_df.columns[:1].to_list()
+		col_1 = g_df.columns[38:].to_list()
+		col_2 = g_df.columns[28:38].to_list()
+		col_3 = g_df.columns[1:28].to_list()
+		new_col = col_0 + col_1 + col_2 + col_3
+		g_df = g_df[new_col]
 
+	elif g_df.iloc[:,13].name == '영업활동현금흐름':
+		if g_df.iloc[:,16].name == 'DPS(보통주,현금+주식)':
+			col_0 = g_df.columns[:13].to_list()
+			col_1 = g_df.columns[43:].to_list()
+			col_2 = g_df.columns[13:43].to_list()
+			new_col = col_0 + col_1 + col_2
+		else:
+			col_0 = g_df.columns[:13].to_list()
+			col_1 = g_df.columns[16:23].to_list()
+			col_2 = g_df.columns[13:16].to_list()
+			col_3 = g_df.columns[23:].to_list()
+			new_col = col_0 + col_1 + col_2 + col_3
+		g_df = g_df[new_col]
+
+	elif  g_df.iloc[:,13].name == 'DPS(보통주,현금+주식)':
+		col_1 = g_df.columns[:13].to_list()
+		col_2 =g_df.columns[40:].to_list()
+		col_3 =g_df.columns[13:40].to_list()
+		new_col=col_1+col_2 + col_3
+		g_df = g_df[new_col]
+
+	elif g_df.iloc[:,13].name != '매출액':
+		col_1 = g_df.columns[:13].to_list()
+		col_2 = g_df.columns[43:].to_list()
+		col_3 = g_df.columns[13:43].to_list()
+		new_col=col_1+col_2 + col_3
+		g_df = g_df[new_col]
+		
+	elif g_df.iloc[:,43].name == 'PCR':
+		print("@@@")
+		col_1 = g_df.columns[:20].to_list()
+		col_2 = g_df.columns[47:].to_list()
+		col_3 = g_df.columns[20:47].to_list()
+		new_col=col_1+col_2 + col_3
+		g_df = g_df[new_col]
+		
+	return g_df
 
 def except_kor(g_df):
 	""" 예외 케이스 처리 함수 """
@@ -104,7 +150,7 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 	# 코넥스가 들어오는 경우 예외처리 필요
 	for code in codes:
 		code = '{:0>6}'.format(code)
-		# if code != '357250':
+		# if code != '078130':
 		# 	continue
 
 		if code == '334890' or code == '402340' or code in KONEX_list: # 예외 케이스
@@ -115,7 +161,7 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 			n_df = pd.read_csv(f'{naver_path}/{code}.csv')
 			g_df = pd.read_csv(f'{git_path}/{code}.csv', encoding='cp949')
 			print(f'{code} : git ok')
-
+			g_df = except_for_git_make_same_columns(g_df)
 			for i in range(1, len(n_df.columns)):
 				for j in range(1, len(n_df)):
 					if pd.isna(n_df.iat[j, i]):
@@ -153,8 +199,8 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 					datas.append(data)
 					count += 1
 					continue
-				if int(n_df.loc[0, i].split('/')[0]) <= 2018 or int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
-					if code in no_december: # 예외처리 (실적이 12월에 안나는 회사)
+				if int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
+					if code in no_december and 'E' not in n_df.loc[0, i]: # 예외처리 (실적이 12월에 안나는 회사)
 						pass
 					else:
 						continue
@@ -213,15 +259,17 @@ def make_one_csv(comp_id_path, save_path):
 		id = comp_ids[i]
 		try:
 			before_df = pd.read_csv(f'{save_path}/{code}.csv', encoding='cp949', index_col=False)
-			# print(code, id)
+			print(code, id)
 		except:
-			# print(f'{code} is excepted')
+			print(f'{code} is excepted')
 			continue
 
 		remove_list = [] # 어떠한 정보도 없는 행 지우기
+	
 		for i in range(len(before_df)):
-			if before_df.iat[i, 4] == 0:
+			if before_df.loc[i, '자산'] == 0:
 				remove_list.append(i)
+
 		df = before_df.drop(remove_list, axis = 0)
 
 		df.insert(0, "Code", [code] * len(df))
@@ -233,6 +281,7 @@ def make_one_csv(comp_id_path, save_path):
 		df = df.astype({'부채비율':'float64'})
 		df = df.astype({'ROE(영업이익)':'float64'})
 		df = df.astype({'ROE(당기순이익)':'float64'})
+
 		if flag == 0:
 			return_date = df
 		else:
@@ -243,23 +292,21 @@ def make_one_csv(comp_id_path, save_path):
 	return_date['구분'] = return_date['구분'].apply(lambda x : x.replace('.0', ''))
 	return_date['구분'] = return_date['구분'].apply(lambda x : x.replace('.', '-'))
 	# # print(return_date)
-	# return_date.to_csv(f'{save_path}/combinded.csv', index=False, encoding='cp949')
+	return_date.to_csv(f'{save_path}/combinded.csv', index=False, encoding='cp949')
 
 
 if __name__ == "__main__":
-	naver_path = '/Users/choewonjun/Documents/coding/crolling/combine_24/crolling/naver_finance/yearly_df/yearly' 
-	git_path = '/Users/choewonjun/Documents/coding/crolling/combine_24/crolling/git_finannce' # 2050
-	save_path = '/Users/choewonjun/Documents/coding/crolling/combine_24/crolling/done_finance' 
-	comp_id_path = 'company.csv'
+	naver_path = '/Users/choewonjun/Documents/coding/finance_data/crolling/naver_finance/csv_files/yearly_df/yearly' 
+	git_path = '/Users/choewonjun/Documents/coding/finance_data/crolling/git_finance/git_finance' # 2050
+	save_path = '/Users/choewonjun/Documents/coding/finance_data/crolling/combined_finance/done_csv' 
+	comp_id_path = '/Users/choewonjun/Documents/coding/finance_data/crolling/combined_finance/company.csv'
 
 	# start_tiem = time.time()
 
 	# union_structure(save_path)
-	# combine_git_naver(naver_path, git_path, comp_id_path, save_path)
-	# make_one_csv(comp_id_path, save_path)
+
+	combine_git_naver(naver_path, git_path, comp_id_path, save_path)
+	make_one_csv(comp_id_path, save_path)
+
 	# end_time = time.time()
 	# print(end_time - start_tiem)
-
-	# list = id_to_code([1154, 517, 648, 394, 651, 143, 912, 273, 281, 1437, 2211, 1957, 1710, 50, 955, 2370, 2374, 841, 2122, 333, 619, 2164, 2293], comp_id_path)
-	# print(list)
-	
