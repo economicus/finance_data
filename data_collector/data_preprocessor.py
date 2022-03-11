@@ -58,7 +58,11 @@ class DataPreprocessor:
 			return np_adj, np_add
 		elif (adj_start > add_start):
 			np_add = np_add[np_add[:,0] >= adj_start]
-			np_add = np_add[np_add[:, 0].argsort()]
+			np_add = np_add[np_add[:,0].argsort()]
+			return (np_adj, np_add)
+		else:
+			np_adj = np_adj[np_adj[:,0] >= add_start]
+			np_adj = np_adj[np_adj[:,0].argsort()]
 			return (np_adj, np_add)
 
 	def util_symbol(self, code, market):
