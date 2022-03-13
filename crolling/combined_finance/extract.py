@@ -41,6 +41,43 @@ def union_structure(save_path):
 			new_df.to_csv(f'{save_path}/{code}.csv', encoding='cp949', index=False)
 
 
+def convert_from_naver_to_git(naver_path, code):
+	""" 크롤링된 네이버 csv 파일을 git 재무제표 형식으로 변환하는 함수 """
+	
+	n_df = pd.read_csv(f'{naver_path}/{code}.csv')
+	no_december = ['169330', '190650' ,'357120', '950210', '338100', '365550', '334890'] # 실적발표가 12월이 아닌 회사
+	datas = []
+	count = 0
+	for i in range(1, len(n_df.columns)):
+		for j in range(1, len(n_df)):
+			if pd.isna(n_df.iat[j, i]):
+				n_df.iat[j, i] = '0'
+	for i in n_df.columns[1:]:
+		if pd.isna(n_df.loc[0, i]):
+			data = [0] * 50
+			datas.append(data)
+			count += 1
+			continue
+		if int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
+			if code in no_december and 'E' not in n_df.loc[0, i]: # 예외처리 (실적이 12월에 안나는 회사)
+				pass
+			else:
+				continue
+		# print(len(extract_from_naver(i, n_df)))
+		datas.append(extract_from_naver(i, n_df))
+		count += 1
+	cols = ['구분', '자산', '유동자산', '비유동자산', '기타자산', '부채', '유동부채',
+		'비유동부채', '자본', '주당액면가액', '발행한주식총수', '보통주', '우선주', '매출액', '매출원가',
+		'매출총이익', '판매비와관리비', '영업이익', '법인세차감전순이익', '당기순이익', '영업활동현금흐름',
+		'투자활동현금흐름', '재무활동현금흐름', 'DPS(보통주,현금+주식)', '배당금(현금+주식)', '배당성향(현금+주식)',
+		'영업이익률', '당기순이익률', '매출액증가율(전년동기)', '영업이익증가율(전년동기)', '당기순이익증가율(전년동기)',
+		'이자보상배율', '유동비율', '부채비율', '배당수익률(보통주,현금+주식)', '매출총이익률', '총자산회전율',
+		'ROE(영업이익)', 'ROE(당기순이익)', 'ROA(영업이익)', 'ROA(당기순이익)', 'EPS', 'BPS',
+		'PER', 'PBR', 'PSR', 'PCR', 'ROIC', 'EV/EBIT', 'EV/EBITDA']
+	csv_df = pd.DataFrame(data=datas, columns=cols)
+	return csv_df
+
+
 
 def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 	""" 네이버 재무제표와 깃 재무제표를 합치는 함수"""
@@ -59,6 +96,7 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 			print('Exception case')
 			continue
 		
+		datas = []
 		try:
 			n_df = pd.read_csv(f'{naver_path}/{code}.csv')
 			g_df = pd.read_csv(f'{git_path}/{code}.csv', encoding='cp949')
@@ -74,7 +112,7 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 					data = [0] * 50
 					datas.append(data)
 					count += 1
-					continue			
+					continue
 
 				if int(n_df.loc[0, i].split('/')[0]) <= 2018 or int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
 					if code in no_december and 'E' not in n_df.loc[0, i]: # 예외처리 (실적이 12월에 안나는 회사)
@@ -88,40 +126,37 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 		except:
 			print(f'{code} : except')
 			# n_df = pd.read_csv(f'{naver_path}/{code}.csv')
-			datas = []
 			count = 0
-			for i in range(1, len(n_df.columns)):
-				for j in range(1, len(n_df)):
-					if pd.isna(n_df.iat[j, i]):
-						n_df.iat[j, i] = '0'
-			for i in n_df.columns[1:]:
-				if pd.isna(n_df.loc[0, i]):
-					data = [0] * 50
-					datas.append(data)
-					count += 1
-					continue
-				if int(n_df.loc[0, i].split('/')[1][:2]) != 12 or 'E' in n_df.loc[0, i]:
-					if code in no_december and 'E' not in n_df.loc[0, i]: # 예외처리 (실적이 12월에 안나는 회사)
-						pass
-					else:
-						continue
-				# print(len(extract_from_naver(i, n_df)))
-				datas.append(extract_from_naver(i, n_df))
-				count += 1
-			cols = ['구분', '자산', '유동자산', '비유동자산', '기타자산', '부채', '유동부채',
-				'비유동부채', '자본', '주당액면가액', '발행한주식총수', '보통주', '우선주', '매출액', '매출원가',
-				'매출총이익', '판매비와관리비', '영업이익', '법인세차감전순이익', '당기순이익', '영업활동현금흐름',
-				'투자활동현금흐름', '재무활동현금흐름', 'DPS(보통주,현금+주식)', '배당금(현금+주식)', '배당성향(현금+주식)',
-				'영업이익률', '당기순이익률', '매출액증가율(전년동기)', '영업이익증가율(전년동기)', '당기순이익증가율(전년동기)',
-				'이자보상배율', '유동비율', '부채비율', '배당수익률(보통주,현금+주식)', '매출총이익률', '총자산회전율',
-				'ROE(영업이익)', 'ROE(당기순이익)', 'ROA(영업이익)', 'ROA(당기순이익)', 'EPS', 'BPS',
-				'PER', 'PBR', 'PSR', 'PCR', 'ROIC', 'EV/EBIT', 'EV/EBITDA']
-			csv_df = pd.DataFrame(data=datas, columns=cols)
+			csv_df = convert_from_naver_to_git(naver_path, code)
 			
 		# print(csv_df)
 		# return
 		csv_df.to_csv(f'{save_path}/{code}.csv', encoding='cp949', index=False)
 		# csv_df.to_csv(f'/Users/choewonjun/Desktop/ck/{code}.csv', encoding='cp949')
+
+def update_finance_from_naver(comp_id_path, naver_path, save_path):
+	""" 이전에 combined 되어 있던 파일이 있다는 가정하에 새롭게 네이버 재무제표에서 데이터를 추가 """
+	codes, _  = read_code_csv(comp_id_path)
+	
+	for code in codes:
+		code = '{:0>6}'.format(code)
+		new_df = pd.read_csv(f'{naver_path}/{code}.csv', encoding='cp949')
+		datas = []
+		try:
+			saved_df = pd.read_csv(f'{save_path}/{code}.csv', encoding='cp949')
+			new_df = convert_from_naver_to_git(naver_path, code)
+			done_years = [i for i in saved_df['구분']]
+			years = new_df['구분']
+			for year in years:
+				if year not in done_years:
+					break
+		
+			new_df = new_df[new_df['구분'] >= year]
+			combined_df = pd.concat([saved_df,new_df])
+		except:
+			print("Exception : No saved finance")
+			continue
+		combined_df.to_csv(f'{save_path}/{code}.csv', encoding='cp949', index=False)
 
 
 def make_one_csv(comp_id_path, save_path):
@@ -184,7 +219,8 @@ if __name__ == "__main__":
 	# union_structure(save_path)
 
 	# combine_git_naver(naver_path, git_path, comp_id_path, save_path)
-	make_one_csv(comp_id_path, save_path)
-
+	# make_one_csv(comp_id_path, save_path)
+	# df = convert_from_naver_to_git(naver_path, '000020')
+	# df.to_csv('~/Desktop/ck.csv', index=False, encoding='cp949')
 	# end_time = time.time()
 	# print(end_time - start_tiem)
