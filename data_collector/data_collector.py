@@ -5,6 +5,7 @@ from marcap import marcap_data
 from query_manager import QueryManager
 import pandas as pd
 from datetime import datetime
+import time
 
 class DataCollector(QueryManager):
 
@@ -45,6 +46,7 @@ class DataCollector(QueryManager):
 			except Exception as e:
 				print(f'{e} : {code}')
 
+
 	def get_finance_table(self, path1):
 		self.create_finance_table()
 		total = len(self.codes)
@@ -53,6 +55,7 @@ class DataCollector(QueryManager):
 		for code in self.codes.itertuples():
 			cnt = self.replace_finance_table(code, at, total, cnt, path1)
 			at+=1
+
 
 	def get_raw_price_info(self):
 		self.create_raw_price_info_table()
@@ -63,6 +66,7 @@ class DataCollector(QueryManager):
 			self.replace_raw_price_info_table(r, at, total)
 			at+=1
 
+
 	def add_main_sector_tocompany(self, path):
 		total = len(self.codes)
 		at = 0
@@ -72,6 +76,7 @@ class DataCollector(QueryManager):
 				at+=1
 			except Exception as e:
 				print(e, code)
+
 
 	def get_price_average_info(self):
 		self.create_price_average_table()
@@ -86,12 +91,13 @@ class DataCollector(QueryManager):
 				at_code+=1
 			at+=1
 
+
 	def get_price_monthly_info(self):
 		self.create_price_monthly_info_table()
 		data = self.bring_additional_data()
 		total = len(self.codes)
 		error_list = []
-		at = 0;
+		at = 0
 		for code in self.codes.itertuples():
 			try:
 				np_adjclose = self.get_adjclose(code.Symbol)
@@ -104,10 +110,12 @@ class DataCollector(QueryManager):
 					self.replace_price_monthly_table(code, x, y, at, total, at_code, total_code)
 					at_code+=1
 				at+=1
+				
 
 			except Exception as e:
 				error_list.append([e, code])
 				print(f'{e} : {code}')
+				pass
 		
 		print(error_list)
 
@@ -118,7 +126,22 @@ class DataCollector(QueryManager):
 		at = 0
 		for r in df_open.itertuples():
 			self.replace_market_open_info_table(r, at, total)
-			at+=1	
+			at += 1
+
+
+	def get_new_price_info(self, code, start, end):
+		"""
+		start, end 에서는 2021-00-00 형태로 보내주면 된다.
+		Open, High, Low, Close, Volume, Change
+		"""
+		df = fdr.DataReader(f'{code}', int(start[:4]))
+		df = df.reset_index()
+		df = df[df["Date"] >= datetime(int(start[:4]), int(start[5:7]), int(start[8:10]))]
+		df = df[df["Date"] <= datetime(int(end[:4]), int(end[5:7]), int(end[8:10]))]
+		df_np = df.to_numpy()
+		return (df_np)
+
+
 
 
 if __name__ == "__main__":
