@@ -6,8 +6,8 @@ from marcap import marcap_data
 from query_manager import QueryManager
 import pandas as pd
 from datetime import datetime
+import numpy as np
 import time
-import csv
 
 class DataCollector(QueryManager):
 
@@ -132,15 +132,27 @@ class DataCollector(QueryManager):
 
 
 	def update_new_price_info(self):
-		with open('../quant/data/price_monthly.csv') as file:
-			wr = csv.writer(file)
-			for code in self.codes.itertuples():
-				new = self.get_new_price_info(code, '2022-01-03', '2022-01-03')
-				print(new)
-				wr.writerow(new)
+		flag = 0
+		data = None
+		# ck = time.time()
+		for code in self.codes.itertuples():
+			new = self.get_new_price_info(code, '2022-01-03', '2022-01-03')
+			if new is None:
+				continue
+			if flag == 0:
+				flag = 1
+				data = new
+				continue
+			data = np.append(data, new, axis=0)
+			if flag == 4:
+				break
+		types = ['int64', 'object', 'int64', 'int64', 'int64', 'int64', 'int64', 'int64', 'float64', 'int64', 'int64', 'int64']
+		df = pd.DataFrame(data)
+		dic = { name:value for name, value in zip(df.columns, types) }
+		df = df.astype(dic)
+		# print(time.time() - ck) # 706 초
+		df.to_csv('/Users/choewonjun/Documents/coding/finance_data/quant/data/price_monthly.csv', index=False, header=False,mode='a')
 
-		
-			
 
 if __name__ == "__main__":
 	# finance data path

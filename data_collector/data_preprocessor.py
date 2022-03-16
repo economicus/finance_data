@@ -234,7 +234,8 @@ class DataPreprocessor:
 		try:
 			price_info = self.get_new_price_only_info(code.Symbol, start, end)
 			ids = [[code.ID]] * len(price_info) # ID
-			dates_to_volume = price_info[:,:6] # Open, High, Low, Close, Volume
+			dates_to_volume = price_info[:,:6] # Date, Open, High, Low, Close, Volume
+			dates_to_volume[0][0] = dates_to_volume[0][0].date()
 			pvolume = [[0]] * len(price_info) # PVolume : 뭔지 몰라서 0으로 해주었다.
 			changes = price_info[:,6:] # Changes
 			marcap = stock.get_market_cap(start.replace('-',''), end.replace('-',''), code.Symbol) # 시가총액, 거래량, 거래대금, 상장주식수
@@ -246,7 +247,8 @@ class DataPreprocessor:
 			tmp_c = np.append(marcap, ranks, axis=1)
 			new_price = np.append(tmp_a, tmp_b, axis=1)
 			new_price = np.append(new_price, tmp_c, axis=1)
-			return
-			# return new_price
+			# return
+			return new_price
 		except:
 			print(f'Exception : {code.Symbol}')
+			return None
