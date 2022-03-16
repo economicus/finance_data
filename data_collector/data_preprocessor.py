@@ -7,6 +7,7 @@ from soupsieve import select
 import math
 from operator import itemgetter
 from marcap import marcap_data
+from pykrx import stock
 
 
 class DataPreprocessor:
@@ -212,3 +213,42 @@ class DataPreprocessor:
 				return 1
 			else:
 				return 0
+
+	def get_new_price_only_info(self, code, start, end):
+		"""
+		start, end 에서는 2021-00-00 형태로 보내주면 된다.
+		Open, High, Low, Close, Volume, Change
+		"""
+		df = fdr.DataReader(f'{code}', int(start[:4]))
+		df = df.reset_index()
+		df = df[df["Date"] >= datetime(int(start[:4]), int(start[5:7]), int(start[8:10]))]
+		df = df[df["Date"] <= datetime(int(end[:4]), int(end[5:7]), int(end[8:10]))]
+		df_np = df.to_numpy()
+		return (df_np)
+
+	def get_new_price_info(self, code, start, end):
+		""" 
+		가격 정보 업데이트 함수
+		start 부터 end 날 까지의 일일 가격 정보를 리턴해준다. 그런데 price csv 파일이 월단위로 있어서 추후 어떻게 할지 정해야할듯 하다.
+		"""
+		try:
+			price_info = self.get_new_price_only_info(code.Symbol, start, end)
+			ids = [[code.ID]] * len(price_info) # ID
+			dates_to_volume = price_info[:,:6] # Date, Open, High, Low, Close, Volume
+			dates_to_volume[0][0] = dates_to_volume[0][0].date()
+			pvolume = [[0]] * len(price_info) # PVolume : 뭔지 몰라서 0으로 해주었다.
+			changes = price_info[:,6:] # Changes
+			marcap = stock.get_market_cap(start.replace('-',''), end.replace('-',''), code.Symbol) # 시가총액, 거래량, 거래대금, 상장주식수
+			marcap = marcap.to_numpy()
+			marcap = marcap[:, [0, 3]] # 시가총액, 상장주식수
+			ranks = [[0]] * len(price_info) # 어떻게 구할지 몰라서 일단 0으로 해두었다. 필요시 계산작업 추가하겠다.
+			tmp_a = np.append(ids, dates_to_volume, axis=1)
+			tmp_b = np.append(pvolume, changes, axis=1)
+			tmp_c = np.append(marcap, ranks, axis=1)
+			new_price = np.append(tmp_a, tmp_b, axis=1)
+			new_price = np.append(new_price, tmp_c, axis=1)
+			# return
+			return new_price
+		except:
+			print(f'Exception : {code.Symbol}')
+			return None
