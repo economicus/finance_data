@@ -40,7 +40,6 @@ def except_for_git_make_same_columns(g_df):
 		g_df = g_df[new_col]
 		
 	elif g_df.iloc[:,43].name == 'PCR':
-		print("@@@")
 		col_1 = g_df.columns[:20].to_list()
 		col_2 = g_df.columns[47:].to_list()
 		col_3 = g_df.columns[20:47].to_list()
@@ -114,8 +113,8 @@ def extract_from_naver(i, n_df):
 	data.append(round(int(n_df.loc[5, i].replace(',', '') + '00000') / int(n_df.loc[8, i].replace(',', '') + '00000') * 100, 2) if int(n_df.loc[8, i].replace(',', '') + '00000') != 0 else 0) # ROA 당기순이익
 	data.append(int(n_df.loc[26, i].replace(',', ''))) # EPS
 	data.append(int(n_df.loc[28, i].replace(',', ''))) # BPS
-	data.append(float(n_df.loc[27, i].replace(',', ''))) # PER
-	data.append(float(n_df.loc[29, i].replace(',', ''))) # PBR
+	data.append(float(n_df.loc[27, i].replace(',', '')) if n_df.loc[27, i] != 0 else 0) # PER
+	data.append(float(n_df.loc[29, i].replace(',', '')) if n_df.loc[27, i] != 0 else 0) # PBR
 	data.append(None) # PSR
 	data.append(None) # PCR
 	data.append(None) # ROIC
