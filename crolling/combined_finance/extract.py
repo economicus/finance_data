@@ -123,6 +123,7 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 
 		csv_df.to_csv(f'{save_path}/{code}.csv', encoding='cp949', index=False)
 
+
 def update_finance_from_naver(comp_id_path, naver_path, save_path):
 	""" 이전에 combined 되어 있던 파일이 있다는 가정하에 새롭게 네이버 재무제표에서 데이터를 추가 """
 	codes, _  = read_code_csv(comp_id_path)
@@ -206,6 +207,11 @@ def make_one_csv(comp_id_path, save_path):
 	return_date['구분'] = return_date['구분'].apply(for_make_yyyy_mm_dd)
 	return_date['구분'] = return_date['구분'].apply(lambda x : x.replace('.0', ''))
 	return_date['구분'] = return_date['구분'].apply(lambda x : x.replace('.', '-'))
+	# 단위 수정
+	change_list = ['자산', '유동자산', '비유동자산', '기타자산', '부채', '유동부채', '비유동부채', '자본','매출액', '매출원가', '매출총이익', '판매비와관리비','영업이익', '법인세차감전순이익', '당기순이익']
+	for col in return_date.columns:
+		if col in change_list:
+			return_date[col] = return_date[col].apply(lambda x : round(x / 100000, 2))
 	# # print(return_date)
 	return_date.to_csv(f'{save_path}/combinded.csv', index=False, encoding='cp949')
 
