@@ -82,9 +82,7 @@ def convert_from_naver_to_git(naver_path, code):
 def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 	""" 네이버 재무제표와 깃 재무제표를 합치는 함수"""
 	codes, _  = read_code_csv(comp_id_path)
-	count = 0
 	KONEX_list = except_KONEX_list(comp_id_path)
-	no_december = ['169330', '190650' ,'357120', '950210', '338100', '365550', '334890'] # 실적발표가 12월이 아닌 회사
 	no_report = ['402340', '383310', '378850', '383800'] # 재무제표가 없는 회사
 	# 코넥스가 들어오는 경우 예외처리 필요
 	for code in codes:
@@ -109,7 +107,7 @@ def combine_git_naver(naver_path, git_path, comp_id_path, save_path):
 			g_df = except_kor(g_df)
 			converted_csv = convert_from_naver_to_git(naver_path, code)
 			# 깃 재무제표에 있던 년도는 지우기
-			drop_list = [] 
+			drop_list = []
 			for idx, year in enumerate(converted_csv['구분']):
 				if str(year) in str(g_df['구분']):
 					drop_list.append(idx)
@@ -198,22 +196,18 @@ def make_one_csv(comp_id_path, save_path):
 		'EV/EBIT', 'EV/EBITDA', '영업활동현금흐름', '투자활동현금흐름', '재무활동현금흐름']
 	types = ['str'] + ['float64'] * 24 + ['object'] * 2 + ['float64'] * 10 + ['int64'] * 2 +  ['float64'] * 10
 	dic = { name:value for name, value in zip(col, types)}
-	# dic['구분'] = 'str'
-	# dic['매출액증가율(전년동기)'] = 'float64'
-	# dic['부채비율'] = 'float64'
-	# dic['ROE(영업이익)'] = 'float64'
-	# dic['ROE(당기순이익)'] = 'float64'
 	return_date = return_date.astype(dic)
 	return_date['구분'] = return_date['구분'].apply(for_make_yyyy_mm_dd)
 	return_date['구분'] = return_date['구분'].apply(lambda x : x.replace('.0', ''))
 	return_date['구분'] = return_date['구분'].apply(lambda x : x.replace('.', '-'))
 	# 단위 수정
-	change_list = ['자산', '유동자산', '비유동자산', '기타자산', '부채', '유동부채', '비유동부채', '자본','매출액', '매출원가', '매출총이익', '판매비와관리비','영업이익', '법인세차감전순이익', '당기순이익']
+	change_list = ['자산', '유동자산', '비유동자산', '기타자산', '부채', '유동부채', '비유동부채', '자본','매출액', '매출원가', '매출총이익', '판매비와관리비','영업이익', '법인세차감전순이익', '당기순이익', '영업활동현금흐름', '투자활동현금흐름', '재무활동현금흐름']
 	for col in return_date.columns:
 		if col in change_list:
 			return_date[col] = return_date[col].apply(lambda x : round(x / 100000, 2))
+		return_date[col] = return_date[col].apply(lambda x : 0 if pd.isna(x) or x == 'nan' or x == None else x)
 	# # print(return_date)
-	return_date.to_csv(f'{save_path}/combinded.csv', index=False, encoding='cp949')
+	return_date.to_csv(f'{save_path}/finance.csv', index=False, encoding='cp949')
 
 
 if __name__ == "__main__":
@@ -223,12 +217,7 @@ if __name__ == "__main__":
 	comp_id_path = '/Users/choewonjun/Documents/coding/finance_data/crolling/combined_finance/company.csv'
 
 	# start_tiem = time.time()
-
-	# union_structure(save_path)
-
 	# combine_git_naver(naver_path, git_path, comp_id_path, save_path)
 	make_one_csv(comp_id_path, save_path)
-	# df = convert_from_naver_to_git(naver_path, '000020')
-	# df.to_csv('~/Desktop/ck.csv', index=False, encoding='cp949')
 	# end_time = time.time()
 	# print(end_time - start_tiem)
